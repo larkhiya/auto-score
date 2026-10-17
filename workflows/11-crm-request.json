@@ -1,0 +1,260 @@
+{
+  "connections": {
+    "Backoff": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Prepare request",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Call CRM": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Decide",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Decide",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Decide": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Retry?",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Next attempt": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Backoff",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Prepare request": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Call CRM",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Retry?": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Next attempt",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Result",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Start": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Prepare request",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "name": "WF-11 CRM request",
+  "nodes": [
+    {
+      "id": "98774cbe-67c5-4e52-9c4a-a2e91364f3b0",
+      "name": "Backoff",
+      "parameters": {
+        "amount": "={{ $json.step.delayMs / 1000 }}",
+        "resume": "timeInterval",
+        "unit": "seconds"
+      },
+      "position": [
+        1340,
+        140
+      ],
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "webhookId": "c9b06c65-a33c-44d9-8b94-4b25c0c660b4"
+    },
+    {
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "CRM API key"
+        }
+      },
+      "id": "7061df19-9e86-4b98-9070-ad821677c5d7",
+      "name": "Call CRM",
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "contentType": "json",
+        "genericAuthType": "httpHeaderAuth",
+        "jsonBody": "={{ $json.body_json }}",
+        "jsonHeaders": "={{ $json.headers_json }}",
+        "method": "={{ $json.request.method }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 10000
+        },
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "specifyHeaders": "json",
+        "url": "={{ $json.url }}"
+      },
+      "position": [
+        440,
+        300
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5
+    },
+    {
+      "id": "1e8260f4-20e4-4165-8020-124b3ef454d2",
+      "name": "Decide",
+      "parameters": {
+        "jsCode": "// @bundle-begin ./retry\n// GENERATED from src/ by scripts/build-workflows.js. Edit src/, then run npm run build. Do not edit here.\nconst __require = (() => {\n  const defs = {\n  \"./retry\": function (module, exports, require) {\n// Retry policy for calls to the CRM (brief §5.3, C-23). Pure; bundled into WF-11.\n//   retry:  network errors, timeouts, 429 and 5xx (temporary: trying again can succeed)\n//   fatal:  every other 4xx (our request is wrong: trying again gives the same answer)\n//   delay:  exponential backoff with jitter, capped; a Retry-After header wins if it's longer\n\nconst DEFAULTS = { baseMs: 500, maxMs: 20000, maxAttempts: 5 };\n\nfunction classify({ statusCode, error } = {}) {\n  if (error) {\n    const msg = String(error.message || error.code || error);\n    const timeout = /timeout|timed out|ETIMEDOUT|ESOCKETTIMEDOUT|aborted/i.test(msg);\n    return { decision: 'retry', reason: timeout ? 'TIMEOUT' : 'NETWORK_ERROR', detail: msg.slice(0, 200) };\n  }\n  if (statusCode >= 200 && statusCode < 300) return { decision: 'ok', reason: null };\n  if (statusCode === 429) return { decision: 'retry', reason: 'RATE_LIMITED' };\n  if (statusCode >= 500) return { decision: 'retry', reason: 'SERVER_ERROR' };\n  if (statusCode === 409) return { decision: 'fatal', reason: 'CONFLICT' };\n  return { decision: 'fatal', reason: statusCode ? `HTTP_${statusCode}` : 'NO_STATUS' };\n}\n\nfunction retryAfterMs(headers) {\n  const v = headers && (headers['retry-after'] || headers['Retry-After']);\n  if (v === undefined || v === null || v === '') return 0;\n  const secs = Number(v);\n  if (Number.isFinite(secs)) return Math.max(0, secs * 1000);\n  const at = Date.parse(v);\n  return Number.isFinite(at) ? Math.max(0, at - Date.now()) : 0;\n}\n\n// attempt = the attempt that just failed (1-based). random() is injectable for tests.\nfunction backoffMs(attempt, { headers, baseMs = DEFAULTS.baseMs, maxMs = DEFAULTS.maxMs, random = Math.random } = {}) {\n  const exp = Math.min(maxMs, baseMs * 2 ** (attempt - 1));\n  const jitter = Math.floor(random() * baseMs);\n  return Math.min(maxMs, Math.max(exp + jitter, retryAfterMs(headers)));\n}\n\n// One decision object for the workflow: what to do next after attempt N.\nfunction nextStep({ statusCode, error, headers, attempt, maxAttempts = DEFAULTS.maxAttempts, random }) {\n  const c = classify({ statusCode, error });\n  if (c.decision === 'retry' && attempt >= maxAttempts) return { ...c, decision: 'give_up', reason: c.reason, delayMs: 0 };\n  return { ...c, delayMs: c.decision === 'retry' ? backoffMs(attempt, { headers, random }) : 0 };\n}\n\nmodule.exports = { classify, backoffMs, retryAfterMs, nextStep, DEFAULTS };\n  },\n  };\n  const cache = {};\n  const resolve = (from, req) => {\n    if (!req.startsWith('.')) return req;\n    const parts = (from.includes('/') ? from.slice(0, from.lastIndexOf('/')) : '.').split('/');\n    for (const seg of req.replace(/\\.js$/, '').split('/')) { if (seg === '..') parts.pop(); else if (seg !== '.') parts.push(seg); }\n    const id = parts.join('/');\n    return id.startsWith('.') ? id : './' + id;\n  };\n  const load = (id) => {\n    if (cache[id]) return cache[id].exports;\n    if (!defs[id]) throw new Error('bundled module not found: ' + id);\n    const module = { exports: {} };\n    cache[id] = module;\n    defs[id](module, module.exports, (req) => load(resolve(id, req)));\n    return module.exports;\n  };\n  return (req) => load(resolve('./x', req));\n})();\n// @bundle-end\n// @bundle-end\n// Both outputs of \"Call CRM\" land here: an HTTP response (any status) or a network error/timeout.\nconst { nextStep } = __require('./retry');\nconst ctx = $('Prepare request').last().json; // this execution handles exactly one request\nconst isError = $json.error !== undefined && $json.statusCode === undefined;\nconst step = isError\n  ? nextStep({ error: $json.error, attempt: ctx.attempt, maxAttempts: ctx.max_attempts })\n  : nextStep({ statusCode: $json.statusCode, headers: $json.headers, attempt: ctx.attempt, maxAttempts: ctx.max_attempts });\nconst response = isError ? null : {\n  status: $json.statusCode,\n  body: $json.body,\n  headers: { 'retry-after': $json.headers?.['retry-after'] ?? null, 'idempotent-replay': $json.headers?.['idempotent-replay'] ?? null },\n};\nreturn {\n  json: {\n    ...ctx,\n    response,\n    step,\n    history: [...ctx.history, { attempt: ctx.attempt, status: response ? response.status : null, decision: step.decision, reason: step.reason, delay_ms: step.delayMs }],\n  },\n};",
+        "mode": "runOnceForEachItem"
+      },
+      "position": [
+        680,
+        300
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "fb2962be-e305-4287-8144-6421d8d40e1a",
+      "name": "Next attempt",
+      "parameters": {
+        "jsCode": "return { json: { ...$json, attempt: $json.attempt + 1 } };",
+        "mode": "runOnceForEachItem"
+      },
+      "position": [
+        1120,
+        140
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "0773c2b3-0286-43b1-b4ac-a2787ebd5f2f",
+      "name": "Prepare request",
+      "parameters": {
+        "jsCode": "// WF-11: one CRM call with the retry policy from src/retry.js (C-23).\n// Input:  { request: { method, path, body?, headers? }, context?, max_attempts? }\n// Output: { ok, status, body, error_code, attempts, history, idempotent_replay, context }\nconst req = $json.request || {};\nif (!req.method || !req.path) throw new Error('WF-11 needs request.method and request.path');\nreturn {\n  json: {\n    request: {\n      method: String(req.method).toUpperCase(), path: req.path, body: req.body ?? null,\n      headers: { ...(req.body != null ? { 'content-type': 'application/json' } : {}), ...(req.headers || {}) },\n    },\n    url: 'http://crm:3000' + req.path,\n    // Strings are built here, in plain JavaScript; the HTTP node only references fields.\n    has_body: req.body != null,\n    body_json: JSON.stringify(req.body ?? null),\n    headers_json: JSON.stringify({ ...(req.body != null ? { 'content-type': 'application/json' } : {}), ...(req.headers || {}) }),\n    context: $json.context ?? null,\n    attempt: $json.attempt || 1,\n    max_attempts: $json.max_attempts || 5,\n    history: $json.history || [],\n  },\n};",
+        "mode": "runOnceForEachItem"
+      },
+      "position": [
+        220,
+        300
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "7fb8383e-5a1e-421a-933d-735a432eb2df",
+      "name": "Result",
+      "parameters": {
+        "jsCode": "const s = $json.step;\nconst r = $json.response;\nreturn {\n  json: {\n    ok: s.decision === 'ok',\n    status: r ? r.status : null,\n    body: r ? r.body : null,\n    error_code: s.decision === 'ok' ? null : s.decision === 'give_up' ? 'RETRIES_EXHAUSTED_' + s.reason : s.reason,\n    attempts: $json.attempt,\n    history: $json.history,\n    idempotent_replay: r ? r.headers['idempotent-replay'] === 'true' : false,\n    context: $json.context,\n  },\n};",
+        "mode": "runOnceForEachItem"
+      },
+      "position": [
+        1120,
+        400
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "6512c69c-4513-4fb0-8c43-62e87fadc183",
+      "name": "Retry?",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "4e4a2736-e2be-43ef-9fbc-bb1ccae70c22",
+              "leftValue": "={{ $json.step.decision }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "retry"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "looseTypeValidation": false,
+        "options": {}
+      },
+      "position": [
+        900,
+        300
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
+    },
+    {
+      "id": "0eaf773d-65a8-43ad-871d-4338c43d4889",
+      "name": "Start",
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "position": [
+        0,
+        300
+      ],
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3
+    }
+  ],
+  "published": true,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

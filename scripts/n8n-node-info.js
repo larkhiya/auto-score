@@ -45,12 +45,20 @@ if (inst.nodeVersions) {
 console.log(`# type: ${found.includes('langchain') ? '@n8n/n8n-nodes-langchain' : 'n8n-nodes-base'}.${desc.name}`);
 if (desc.credentials) console.log(`# credentials: ${desc.credentials.map((c) => c.name).join(', ')}`);
 
+// n8n ships authoring guidance ("builderHint") with its nodes: print it, it beats guessing.
+const hints = inst.description && inst.description.builderHint;
+if (hints) {
+  const text = [].concat(hints.message || [], ...(hints.extraTypeDefContent || []).map((x) => x.content)).join('\n');
+  if (text.trim()) console.log(`# builder hints:\n${text.replace(/^/gm, '#   ')}`);
+}
+
 function show(props, indent) {
   for (const p of props || []) {
     const opts = p.options && p.type !== 'collection' && p.type !== 'fixedCollection'
       ? ' options=' + p.options.map((o) => o.value ?? o.name).join('|') : '';
     const shown = p.displayOptions ? ' show=' + JSON.stringify(p.displayOptions.show || p.displayOptions.hide) : '';
-    console.log(`${indent}${p.name}: ${p.type} default=${JSON.stringify(p.default)}${opts}${shown}`);
+    const hint = p.builderHint && (p.builderHint.propertyHint || p.builderHint.message);
+    console.log(`${indent}${p.name}: ${p.type} default=${JSON.stringify(p.default)}${opts}${shown}${hint ? `  // hint: ${String(hint).replace(/\s+/g, ' ').slice(0, 300)}` : ''}`);
     if (p.type === 'collection') show(p.options, indent + '  ');
     if (p.type === 'fixedCollection') for (const o of p.options || []) { console.log(`${indent}  [${o.name}]`); show(o.values, indent + '    '); }
   }

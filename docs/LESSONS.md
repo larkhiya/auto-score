@@ -14,6 +14,15 @@ Template:
 
 ---
 
+## L-004 · n8n sent no request body: two wrong theories before looking at the wire
+- **Date:** 2026-10-17 · **Phase:** 3 · **Who:** Claude
+- **What happened:** WF-11's PATCH to the CRM kept failing with 422 CONTRACT_VIOLATION (empty body). I "fixed" it twice on theory: first the response-format autodetect, then the `??`/`{}` inside the `jsonBody` expression. Neither was the cause. Only then did I capture the real request with an echo server: `content-length: 0`.
+- **Symptom:** CRM 422s ("must be object", later "missing schema_version") although the item clearly held the body.
+- **Root cause:** `sendBody` was an expression (`={{ $json.has_body }}`). n8n decides which dependent parameters are visible (content type, `specifyBody`, `jsonBody`) from the raw parameter value, so with an expression the body parameters counted as hidden and were never read. Process cause: I changed code before observing the actual behaviour.
+- **Fix:** `sendBody: true` (static). Verified on the wire (68-byte JSON body) and end to end: claim NEW→SCREENING once (exec 23), redelivery skipped with 409 (exec 26). The two earlier changes are harmless and kept as explicit settings (JSON response format, strings built in the Code node), with their misleading comments corrected.
+- **Prevention rule:** when an integration misbehaves, capture what is actually sent before theorising. Never drive an n8n "switch" parameter (`sendBody`, `sendHeaders`, `authentication`, `resource`/`operation`) with an expression. → promoted to Learned Rules: yes
+- **Concept it illustrates:** C-28 (observability: look at the data, not your model of it)
+
 ## L-003 · Bash executed text I meant to write into a doc
 - **Date:** 2026-10-17 · **Phase:** 2 · **Who:** Claude
 - **What happened:** I updated LEARNING.md with `node -e "..."` and put markdown containing backticks and `$` inside the double-quoted string. Bash treated each backticked path as a command and ran it, including `scripts/generate-applicants.js`. The doc came out mangled. Earlier the same pattern had expanded `${CRM_API_KEY:?…}` in a Compose edit and broken a JS string in a `sed` fix.

@@ -51,15 +51,52 @@ async function importFiles(files) {
     const { body, published, unresolved } = fromPortable(p, { workflowIdByName, credentialIdByTypeAndName });
     if (unresolved.length) console.warn(`warning  ${p.name}: unresolved ${unresolved.join(', ')}`);
     await api.updateWorkflow(id, body);
-    if (published) await api.publishWorkflow(id);
-    else {
-      const current = await api.getWorkflow(id);
-      if (current.active) await api.unpublishWorkflow(id);
+    console.log(`updated  ${p.name} (${id})  ← ${path.relative(ROOT, file)}`);
+    results.push({ name: p.name, id, published, deps: dependencies(p) });
+  }
+
+  // Pass 3: publish state. n8n 2.x refuses to publish a workflow whose sub-workflows aren't
+  // published, so publish dependencies first (and unpublish dependents first).
+  for (const r of publishOrder(results)) {
+    if (r.published) {
+      await api.publishWorkflow(r.id);
+      console.log(`published ${r.name}`);
+    } else {
+      const current = await api.getWorkflow(r.id);
+      if (current.active) { await api.unpublishWorkflow(r.id); console.log(`unpublished ${r.name}`); }
     }
-    console.log(`updated  ${p.name} (${id})${published ? ' · published' : ''}  ← ${path.relative(ROOT, file)}`);
-    results.push({ name: p.name, id, published });
   }
   return results;
+}
+
+// Names of workflows this one calls (Execute Workflow nodes) or uses as its error workflow.
+function dependencies(p) {
+  const refs = new Set();
+  const NAME = '@name:';
+  for (const n of p.nodes) {
+    const w = n.parameters && n.parameters.workflowId;
+    const v = w && typeof w === 'object' ? w.value : w;
+    if (typeof v === 'string' && v.startsWith(NAME)) refs.add(v.slice(NAME.length));
+  }
+  const ew = p.settings && p.settings.errorWorkflow;
+  if (typeof ew === 'string' && ew.startsWith(NAME)) refs.add(ew.slice(NAME.length));
+  refs.delete(p.name);
+  return [...refs];
+}
+
+// Dependencies before dependents (published ones); the reverse for ones being unpublished.
+function publishOrder(results) {
+  const byName = Object.fromEntries(results.map((r) => [r.name, r]));
+  const ordered = [];
+  const seen = new Set();
+  const visit = (r) => {
+    if (seen.has(r.name)) return;
+    seen.add(r.name);
+    for (const d of r.deps) if (byName[d]) visit(byName[d]);
+    ordered.push(r);
+  };
+  results.forEach(visit);
+  return [...ordered.filter((r) => r.published), ...ordered.filter((r) => !r.published).reverse()];
 }
 
 if (require.main === module) {

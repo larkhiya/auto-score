@@ -1,0 +1,200 @@
+{
+  "connections": {
+    "Build claim": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Claim (WF-11)",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Claim (WF-11)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "After claim",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Start": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Validate application",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Valid?": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Build claim",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Invalid input",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Validate application": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Valid?",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "name": "WF-10 Screening",
+  "nodes": [
+    {
+      "id": "5483c10b-55a5-4e58-bae8-b091bb37c76d",
+      "name": "After claim",
+      "parameters": {
+        "jsCode": "const a = $json.context.application;\nif ($json.ok) return { json: { outcome: 'CLAIMED', application_id: a.application_id, job_id: a.job_id, attempts: $json.attempts } };\nif ($json.status === 409) {\n  return { json: { outcome: 'DUPLICATE_SKIPPED', application_id: a.application_id, current_status: $json.body?.error?.details?.current_status ?? null } };\n}\nthrow new Error(`claim failed for ${a.application_id}: ${$json.error_code} (HTTP ${$json.status})`);",
+        "mode": "runOnceForEachItem"
+      },
+      "position": [
+        1100,
+        200
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "eaf2e1c0-e2a3-471a-a251-85a5060755a3",
+      "name": "Build claim",
+      "parameters": {
+        "jsCode": "// Claim the record: NEW → SCREENING, only if it is still NEW (compare-and-set, C-10).\n// A second delivery of the same application gets 409 and is skipped.\nconst a = $json.application;\nconst expected = $json.trigger === 'replay' ? 'ERROR' : 'NEW';\nconst body = {\n  schema_version: '1.0.0', application_id: a.application_id, status: 'SCREENING',\n  total_score: null, breakdown: null, summary: null, reason_codes: [], flags: [],\n  job_id: a.job_id, job_profile_version: null, prompt_version: null, model: null,\n  execution_id: String($execution.id), processed_at: new Date().toISOString(), idempotency_key: a.idempotency_key,\n};\nreturn {\n  json: {\n    request: {\n      method: 'PATCH', path: '/candidates/' + a.application_id, body,\n      headers: { 'x-expected-status': expected, 'idempotency-key': a.idempotency_key + ':SCREENING:' + $execution.id },\n    },\n    context: { application: a, trigger: $json.trigger },\n  },\n};",
+        "mode": "runOnceForEachItem"
+      },
+      "position": [
+        660,
+        200
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "9427c480-341b-4941-9209-66a15ef816e5",
+      "name": "Claim (WF-11)",
+      "parameters": {
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        },
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "cachedResultName": "WF-11 CRM request",
+          "mode": "list",
+          "value": "@name:WF-11 CRM request"
+        }
+      },
+      "position": [
+        880,
+        200
+      ],
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4
+    },
+    {
+      "id": "2bb7d859-433c-4557-941a-3d0f7a57babd",
+      "name": "Invalid input",
+      "parameters": {
+        "jsCode": "// Phase 3 stub: Phase 6 writes NEEDS_REVIEW (INVALID_APPLICATION) to the CRM here.\nreturn { json: { outcome: 'INVALID_INPUT', application_id: $json.application?.application_id ?? null, errors: $json.validation_errors } };",
+        "mode": "runOnceForEachItem"
+      },
+      "position": [
+        660,
+        420
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "3b272079-0c68-48cf-99bb-4b1685bffb34",
+      "name": "Start",
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "position": [
+        0,
+        300
+      ],
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3
+    },
+    {
+      "id": "09eb3c42-dc2e-4a2c-9d3c-a7dc0b5762e0",
+      "name": "Valid?",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "3b17d07f-1b40-447b-b771-a63a26559e9c",
+              "leftValue": "={{ $json.valid }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": ""
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "looseTypeValidation": false,
+        "options": {}
+      },
+      "position": [
+        440,
+        300
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
+    },
+    {
+      "id": "fecd4170-911d-40e6-9d75-f59ad8e3c723",
+      "name": "Validate application",
+      "parameters": {
+        "jsCode": "// @bundle-begin ./generated/validators/application_received\n// GENERATED from src/ by scripts/build-workflows.js. Edit src/, then run npm run build. Do not edit here.\nconst __require = (() => {\n  const defs = {\n  \"./generated/validators/application_received\": function (module, exports, require) {\n// GENERATED by scripts/build-validators.js from contracts/application_received.schema.json (schema_version 1.0.0). Do not edit.\n\"use strict\";\nmodule.exports = validate20;\nmodule.exports.default = validate20;\nconst schema31 = {\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"$id\":\"https://auto-score.local/contracts/application_received.schema.json\",\"title\":\"ApplicationReceived\",\"description\":\"The one shape every intake path (CRM webhook, email) produces. WF-10 accepts nothing else.\",\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"schema_version\",\"application_id\",\"source\",\"received_at\",\"job_id\",\"candidate\",\"answers\",\"cv\",\"idempotency_key\",\"source_ref\",\"duplicate_of\"],\"properties\":{\"schema_version\":{\"const\":\"1.0.0\"},\"application_id\":{\"$ref\":\"common.schema.json#/$defs/application_id\"},\"source\":{\"enum\":[\"crm\",\"email\"]},\"received_at\":{\"$ref\":\"common.schema.json#/$defs/timestamp\"},\"job_id\":{\"description\":\"null when an email can't be routed to a job; WF-10 then sends it to NEEDS_REVIEW.\",\"anyOf\":[{\"$ref\":\"common.schema.json#/$defs/job_id\"},{\"type\":\"null\"}]},\"candidate\":{\"description\":\"Personal data for the CRM only. Redacted before any LLM call and never used for scoring.\",\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"name\",\"email\"],\"properties\":{\"name\":{\"type\":[\"string\",\"null\"]},\"email\":{\"type\":[\"string\",\"null\"]},\"phone\":{\"type\":[\"string\",\"null\"]},\"location\":{\"type\":[\"string\",\"null\"]}}},\"answers\":{\"description\":\"Application-form answers. Questions differ per job, so keys are open; values are simple. null when the applicant sent an email instead of filling the form.\",\"anyOf\":[{\"type\":\"object\",\"additionalProperties\":{\"anyOf\":[{\"type\":[\"string\",\"number\",\"boolean\",\"null\"]},{\"type\":\"array\",\"items\":{\"type\":\"string\"}}]}},{\"type\":\"null\"}]},\"cv\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"text\",\"filename\",\"mime\",\"sha256\",\"extraction_method\",\"extraction_error\",\"char_count\"],\"properties\":{\"text\":{\"type\":\"string\",\"description\":\"Extracted plain text. Empty string when extraction failed.\"},\"filename\":{\"type\":[\"string\",\"null\"]},\"mime\":{\"type\":[\"string\",\"null\"]},\"sha256\":{\"$ref\":\"common.schema.json#/$defs/sha256\",\"description\":\"Hash of the normalized text, used in the idempotency key.\"},\"extraction_method\":{\"enum\":[\"provided_text\",\"plain_text\",\"pdf_text\",\"docx\",\"email_body\",\"none\"]},\"extraction_error\":{\"type\":[\"string\",\"null\"],\"description\":\"e.g. NO_TEXT_LAYER, NO_ATTACHMENT, UNSUPPORTED_TYPE\"},\"char_count\":{\"type\":\"integer\",\"minimum\":0}}},\"idempotency_key\":{\"description\":\"Same delivery twice → same key → processed once. Format: <application_id>:<cv sha256 prefix>.\",\"type\":\"string\",\"minLength\":8},\"source_ref\":{\"description\":\"Where it came from: the CRM event id or the email Message-ID.\",\"type\":[\"string\",\"null\"]},\"duplicate_of\":{\"description\":\"Business duplicate (audit item 4): the same person already applied to this job under a different application. Set at intake; read by the pre-filter's `duplicate` check. Redelivery of the SAME application is handled by idempotency_key, not this.\",\"anyOf\":[{\"$ref\":\"common.schema.json#/$defs/application_id\"},{\"type\":\"null\"}]}}};\nconst schema33 = {\"type\":\"string\",\"minLength\":1,\"maxLength\":64};\nconst schema34 = {\"description\":\"ISO 8601 in UTC, e.g. 2026-10-17T09:30:00Z or with milliseconds.\",\"type\":\"string\",\"pattern\":\"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\\\.[0-9]{1,6})?Z$\"};\nconst schema35 = {\"description\":\"Short slug for a role, e.g. csr, sdr, admin.\",\"type\":\"string\",\"pattern\":\"^[a-z][a-z0-9_-]{1,31}$\"};\nconst schema36 = {\"type\":\"string\",\"pattern\":\"^[a-f0-9]{64}$\"};\nconst func1 = Object.prototype.hasOwnProperty;\nconst func2 = require(\"ajv/dist/runtime/ucs2length\").default;\nconst pattern4 = new RegExp(\"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\\\.[0-9]{1,6})?Z$\", \"u\");\nconst pattern5 = new RegExp(\"^[a-z][a-z0-9_-]{1,31}$\", \"u\");\nconst pattern6 = new RegExp(\"^[a-f0-9]{64}$\", \"u\");\n\nfunction validate20(data, {instancePath=\"\", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){\n/*# sourceURL=\"https://auto-score.local/contracts/application_received.schema.json\" */;\nlet vErrors = null;\nlet errors = 0;\nconst evaluated0 = validate20.evaluated;\nif(evaluated0.dynamicProps){\nevaluated0.props = undefined;\n}\nif(evaluated0.dynamicItems){\nevaluated0.items = undefined;\n}\nif(errors === 0){\nif(data && typeof data == \"object\" && !Array.isArray(data)){\nlet missing0;\nif((((((((((((data.schema_version === undefined) && (missing0 = \"schema_version\")) || ((data.application_id === undefined) && (missing0 = \"application_id\"))) || ((data.source === undefined) && (missing0 = \"source\"))) || ((data.received_at === undefined) && (missing0 = \"received_at\"))) || ((data.job_id === undefined) && (missing0 = \"job_id\"))) || ((data.candidate === undefined) && (missing0 = \"candidate\"))) || ((data.answers === undefined) && (missing0 = \"answers\"))) || ((data.cv === undefined) && (missing0 = \"cv\"))) || ((data.idempotency_key === undefined) && (missing0 = \"idempotency_key\"))) || ((data.source_ref === undefined) && (missing0 = \"source_ref\"))) || ((data.duplicate_of === undefined) && (missing0 = \"duplicate_of\"))){\nvalidate20.errors = [{instancePath,schemaPath:\"#/required\",keyword:\"required\",params:{missingProperty: missing0},message:\"must have required property '\"+missing0+\"'\"}];\nreturn false;\n}\nelse {\nconst _errs1 = errors;\nfor(const key0 in data){\nif(!(func1.call(schema31.properties, key0))){\nvalidate20.errors = [{instancePath,schemaPath:\"#/additionalProperties\",keyword:\"additionalProperties\",params:{additionalProperty: key0},message:\"must NOT have additional properties\"}];\nreturn false;\nbreak;\n}\n}\nif(_errs1 === errors){\nif(data.schema_version !== undefined){\nconst _errs2 = errors;\nif(\"1.0.0\" !== data.schema_version){\nvalidate20.errors = [{instancePath:instancePath+\"/schema_version\",schemaPath:\"#/properties/schema_version/const\",keyword:\"const\",params:{allowedValue: \"1.0.0\"},message:\"must be equal to constant\"}];\nreturn false;\n}\nvar valid0 = _errs2 === errors;\n}\nelse {\nvar valid0 = true;\n}\nif(valid0){\nif(data.application_id !== undefined){\nlet data1 = data.application_id;\nconst _errs3 = errors;\nconst _errs4 = errors;\nif(errors === _errs4){\nif(typeof data1 === \"string\"){\nif(func2(data1) > 64){\nvalidate20.errors = [{instancePath:instancePath+\"/application_id\",schemaPath:\"common.schema.json#/$defs/application_id/maxLength\",keyword:\"maxLength\",params:{limit: 64},message:\"must NOT have more than 64 characters\"}];\nreturn false;\n}\nelse {\nif(func2(data1) < 1){\nvalidate20.errors = [{instancePath:instancePath+\"/application_id\",schemaPath:\"common.schema.json#/$defs/application_id/minLength\",keyword:\"minLength\",params:{limit: 1},message:\"must NOT have fewer than 1 characters\"}];\nreturn false;\n}\n}\n}\nelse {\nvalidate20.errors = [{instancePath:instancePath+\"/application_id\",schemaPath:\"common.schema.json#/$defs/application_id/type\",keyword:\"type\",params:{type: \"string\"},message:\"must be string\"}];\nreturn false;\n}\n}\nvar valid0 = _errs3 === errors;\n}\nelse {\nvar valid0 = true;\n}\nif(valid0){\nif(data.source !== undefined){\nlet data2 = data.source;\nconst _errs6 = errors;\nif(!((data2 === \"crm\") || (data2 === \"email\"))){\nvalidate20.errors = [{instancePath:instancePath+\"/source\",schemaPath:\"#/properties/source/enum\",keyword:\"enum\",params:{allowedValues: schema31.properties.source.enum},message:\"must be equal to one of the allowed values\"}];\nreturn false;\n}\nvar valid0 = _errs6 === errors;\n}\nelse {\nvar valid0 = true;\n}\nif(valid0){\nif(data.received_at !== undefined){\nlet data3 = data.received_at;\nconst _errs7 = errors;\nconst _errs8 = errors;\nif(errors === _errs8){\nif(typeof data3 === \"string\"){\nif(!pattern4.test(data3)){\nvalidate20.errors = [{instancePath:instancePath+\"/received_at\",schemaPath:\"common.schema.json#/$defs/timestamp/pattern\",keyword:\"pattern\",params:{pattern: \"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\\\.[0-9]{1,6})?Z$\"},message:\"must match pattern \\\"\"+\"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\\\.[0-9]{1,6})?Z$\"+\"\\\"\"}];\nreturn false;\n}\n}\nelse {\nvalidate20.errors = [{instancePath:instancePath+\"/received_at\",schemaPath:\"common.schema.json#/$defs/timestamp/type\",keyword:\"type\",params:{type: \"string\"},message:\"must be string\"}];\nreturn false;\n}\n}\nvar valid0 = _errs7 === errors;\n}\nelse {\nvar valid0 = true;\n}\nif(valid0){\nif(data.job_id !== undefined){\nlet data4 = data.job_id;\nconst _errs10 = errors;\nconst _errs11 = errors;\nlet valid3 = false;\nconst _errs12 = errors;\nconst _errs13 = errors;\nif(errors === _errs13){\nif(typeof data4 === \"string\"){\nif(!pattern5.test(data4)){\nconst err0 = {instancePath:instancePath+\"/job_id\",schemaPath:\"common.schema.json#/$defs/job_id/pattern\",keyword:\"pattern\",params:{pattern: \"^[a-z][a-z0-9_-]{1,31}$\"},message:\"must match pattern \\\"\"+\"^[a-z][a-z0-9_-]{1,31}$\"+\"\\\"\"};\nif(vErrors === null){\nvErrors = [err0];\n}\nelse {\nvErrors.push(err0);\n}\nerrors++;\n}\n}\nelse {\nconst err1 = {instancePath:instancePath+\"/job_id\",schemaPath:\"common.schema.json#/$defs/job_id/type\",keyword:\"type\",params:{type: \"string\"},message:\"must be string\"};\nif(vErrors === null){\nvErrors = [err1];\n}\nelse {\nvErrors.push(err1);\n}\nerrors++;\n}\n}\nvar _valid0 = _errs12 === errors;\nvalid3 = valid3 || _valid0;\nconst _errs15 = errors;\nif(data4 !== null){\nconst err2 = {instancePath:instancePath+\"/job_id\",schemaPath:\"#/properties/job_id/anyOf/1/type\",keyword:\"type\",params:{type: \"null\"},message:\"must be null\"};\nif(vErrors === null){\nvErrors = [err2];\n}\nelse {\nvErrors.push(err2);\n}\nerrors++;\n}\nvar _valid0 = _errs15 === errors;\nvalid3 = valid3 || _valid0;\nif(!valid3){\nconst err3 = {instancePath:instancePath+\"/job_id\",schemaPath:\"#/properties/job_id/anyOf\",keyword:\"anyOf\",params:{},message:\"must match a schema in anyOf\"};\nif(vErrors === null){\nvErrors = [err3];\n}\nelse {\nvErrors.push(err3);\n}\nerrors++;\nvalidate20.errors = vErrors;\nreturn false;\n}\nelse {\nerrors = _errs11;\nif(vErrors !== null){\nif(_errs11){\nvErrors.length = _errs11;\n}\nelse {\nvErrors = null;\n}\n}\n}\nvar valid0 = _errs10 === errors;\n}\nelse {\nvar valid0 = true;\n}\nif(valid0){\nif(data.candidate !== undefined){\nlet data5 = data.candidate;\nconst _errs17 = errors;\nif(errors === _errs17){\nif(data5 && typeof data5 == \"object\" && !Array.isArray(data5)){\nlet missing1;\nif(((data5.name === undefined) && (missing1 = \"name\")) || ((data5.email === undefined) && (missing1 = \"email\"))){\nvalidate20.errors = [{instancePath:instancePath+\"/candidate\",schemaPath:\"#/properties/candidate/required\",keyword:\"required\",params:{missingProperty: missing1},message:\"must have required property '\"+missing1+\"'\"}];\nreturn false;\n}\nelse {\nconst _errs19 = errors;\nfor(const key1 in data5){\nif(!((((key1 === \"name\") || (key1 === \"email\")) || (key1 === \"phone\")) || (key1 === \"location\"))){\nvalidate20.errors = [{instancePath:instancePath+\"/candidate\",schemaPath:\"#/properties/candidate/additionalProperties\",keyword:\"additionalProperties\",params:{additionalProperty: key1},message:\"must NOT have additional properties\"}];\nreturn false;\nbreak;\n}\n}\nif(_errs19 === errors){\nif(data5.name !== undefined){\nlet data6 = data5.name;\nconst _errs20 = errors;\nif((typeof data6 !== \"string\") && (data6 !== null)){\nvalidate20.errors = [{instancePath:instancePath+\"/candidate/name\",schemaPath:\"#/properties/candidate/properties/name/type\",keyword:\"type\",params:{type: schema31.properties.candidate.properties.name.type},message:\"must be string,null\"}];\nreturn false;\n}\nvar valid5 = _errs20 === errors;\n}\nelse {\nvar valid5 = true;\n}\nif(valid5){\nif(data5.email !== undefined){\nlet data7 = data5.email;\nconst _errs22 = errors;\nif((typeof data7 !== \"string\") && (data7 !== null)){\nvalidate20.errors = [{instancePath:instancePath+\"/candidate/email\",schemaPath:\"#/properties/candidate/properties/email/type\",keyword:\"type\",params:{type: schema31.properties.candidate.properties.email.type},message:\"must be string,null\"}];\nreturn false;\n}\nvar valid5 = _errs22 === errors;\n}\nelse {\nvar valid5 = true;\n}\nif(valid5){\nif(data5.phone !== undefined){\nlet data8 = data5.phone;\nconst _errs24 = errors;\nif((typeof data8 !== \"string\") && (data8 !== null)){\nvalidate20.errors = [{instancePath:instancePath+\"/candidate/phone\",schemaPath:\"#/properties/candidate/properties/phone/type\",keyword:\"type\",params:{type: schema31.properties.candidate.properties.phone.type},message:\"must be string,null\"}];\nreturn false;\n}\nvar valid5 = _errs24 === errors;\n}\nelse {\nvar valid5 = true;\n}\nif(valid5){\nif(data5.location !== undefined){\nlet data9 = data5.location;\nconst _errs26 = errors;\nif((typeof data9 !== \"string\") && (data9 !== null)){\nvalidate20.errors = [{instancePath:instancePath+\"/candidate/location\",schemaPath:\"#/properties/candidate/properties/location/type\",keyword:\"type\",params:{type: schema31.properties.candidate.properties.location.type},message:\"must be string,null\"}];\nreturn false;\n}\nvar valid5 = _errs26 === errors;\n}\nelse {\nvar valid5 = true;\n}\n}\n}\n}\n}\n}\n}\nelse {\nvalidate20.errors = [{instancePath:instancePath+\"/candidate\",schemaPath:\"#/properties/candidate/type\",keyword:\"type\",params:{type: \"object\"},message:\"must be object\"}];\nreturn false;\n}\n}\nvar valid0 = _errs17 === errors;\n}\nelse {\nvar valid0 = true;\n}\nif(valid0){\nif(data.answers !== undefined){\nlet data10 = data.answers;\nconst _errs28 = errors;\nconst _errs29 = errors;\nlet valid6 = false;\nconst _errs30 = errors;\nif(errors === _errs30){\nif(data10 && typeof data10 == \"object\" && !Array.isArray(data10)){\nfor(const key2 in data10){\nlet data11 = data10[key2];\nconst _errs33 = errors;\nconst _errs34 = errors;\nlet valid8 = false;\nconst _errs35 = errors;\nif((((typeof data11 !== \"string\") && (!((typeof data11 == \"number\") && (isFinite(data11))))) && (typeof data11 !== \"boolean\")) && (data11 !== null)){\nconst err4 = {instancePath:instancePath+\"/answers/\" + key2.replace(/~/g, \"~0\").replace(/\\//g, \"~1\"),schemaPath:\"#/properties/answers/anyOf/0/additionalProperties/anyOf/0/type\",keyword:\"type\",params:{type: schema31.properties.answers.anyOf[0].additionalProperties.anyOf[0].type},message:\"must be string,number,boolean,null\"};\nif(vErrors === null){\nvErrors = [err4];\n}\nelse {\nvErrors.push(err4);\n}\nerrors++;\n}\nvar _valid2 = _errs35 === errors;\nvalid8 = valid8 || _valid2;\nconst _errs37 = errors;\nif(errors === _errs37){\nif(Array.isArray(data11)){\nvar valid9 = true;\nconst len0 = data11.length;\nfor(let i0=0; i0<len0; i0++){\nconst _errs39 = errors;\nif(typeof data11[i0] !== \"string\"){\nconst err5 = {instancePath:instancePath+\"/answers/\" + key2.replace(/~/g, \"~0\").replace(/\\//g, \"~1\")+\"/\" + i0,schemaPath:\"#/properties/answers/anyOf/0/additionalProperties/anyOf/1/items/type\",keyword:\"type\",params:{type: \"string\"},message:\"must be string\"};\nif(vErrors === null){\nvErrors = [err5];\n}\nelse {\nvErrors.push(err5);\n}\nerrors++;\n}\nvar valid9 = _errs39 === errors;\nif(!valid9){\nbreak;\n}\n}\n}\nelse {\nconst err6 = {instancePath:instancePath+\"/answers/\" + key2.replace(/~/g, \"~0\").replace(/\\//g, \"~1\"),schemaPath:\"#/properties/answers/anyOf/0/additionalProperties/anyOf/1/type\",keyword:\"type\",params:{type: \"array\"},message:\"must be array\"};\nif(vErrors === null){\nvErrors = [err6];\n}\nelse {\nvErrors.push(err6);\n}\nerrors++;\n}\n}\nvar _valid2 = _errs37 === errors;\nvalid8 = valid8 || _valid2;\nif(!valid8){\nconst err7 = {instancePath:instancePath+\"/answers/\" + key2.replace(/~/g, \"~0\").replace(/\\//g, \"~1\"),schemaPath:\"#/properties/answers/anyOf/0/additionalProperties/anyOf\",keyword:\"anyOf\",params:{},message:\"must match a schema in anyOf\"};\nif(vErrors === null){\nvErrors = [err7];\n}\nelse {\nvErrors.push(err7);\n}\nerrors++;\n}\nelse {\nerrors = _errs34;\nif(vErrors !== null){\nif(_errs34){\nvErrors.length = _errs34;\n}\nelse {\nvErrors = null;\n}\n}\n}\nvar valid7 = _errs33 === errors;\nif(!valid7){\nbreak;\n}\n}\n}\nelse {\nconst err8 = {instancePath:instancePath+\"/answers\",schemaPath:\"#/properties/answers/anyOf/0/type\",keyword:\"type\",params:{type: \"object\"},message:\"must be object\"};\nif(vErrors === null){\nvErrors = [err8];\n}\nelse {\nvErrors.push(err8);\n}\nerrors++;\n}\n}\nvar _valid1 = _errs30 === errors;\nvalid6 = valid6 || _valid1;\nconst _errs41 = errors;\nif(data10 !== null){\nconst err9 = {instancePath:instancePath+\"/answers\",schemaPath:\"#/properties/answers/anyOf/1/type\",keyword:\"type\",params:{type: \"null\"},message:\"must be null\"};\nif(vErrors === null){\nvErrors = [err9];\n}\nelse {\nvErrors.push(err9);\n}\nerrors++;\n}\nvar _valid1 = _errs41 === errors;\nvalid6 = valid6 || _valid1;\nif(!valid6){\nconst err10 = {instancePath:instancePath+\"/answers\",schemaPath:\"#/properties/answers/anyOf\",keyword:\"anyOf\",params:{},message:\"must match a schema in anyOf\"};\nif(vErrors === null){\nvErrors = [err10];\n}\nelse {\nvErrors.push(err10);\n}\nerrors++;\nvalidate20.errors = vErrors;\nreturn false;\n}\nelse {\nerrors = _errs29;\nif(vErrors !== null){\nif(_errs29){\nvErrors.length = _errs29;\n}\nelse {\nvErrors = null;\n}\n}\n}\nvar valid0 = _errs28 === errors;\n}\nelse {\nvar valid0 = true;\n}\nif(valid0){\nif(data.cv !== undefined){\nlet data13 = data.cv;\nconst _errs43 = errors;\nif(errors === _errs43){\nif(data13 && typeof data13 == \"object\" && !Array.isArray(data13)){\nlet missing2;\nif((((((((data13.text === undefined) && (missing2 = \"text\")) || ((data13.filename === undefined) && (missing2 = \"filename\"))) || ((data13.mime === undefined) && (missing2 = \"mime\"))) || ((data13.sha256 === undefined) && (missing2 = \"sha256\"))) || ((data13.extraction_method === undefined) && (missing2 = \"extraction_method\"))) || ((data13.extraction_error === undefined) && (missing2 = \"extraction_error\"))) || ((data13.char_count === undefined) && (missing2 = \"char_count\"))){\nvalidate20.errors = [{instancePath:instancePath+\"/cv\",schemaPath:\"#/properties/cv/required\",keyword:\"required\",params:{missingProperty: missing2},message:\"must have required property '\"+missing2+\"'\"}];\nreturn false;\n}\nelse {\nconst _errs45 = errors;\nfor(const key3 in data13){\nif(!(((((((key3 === \"text\") || (key3 === \"filename\")) || (key3 === \"mime\")) || (key3 === \"sha256\")) || (key3 === \"extraction_method\")) || (key3 === \"extraction_error\")) || (key3 === \"char_count\"))){\nvalidate20.errors = [{instancePath:instancePath+\"/cv\",schemaPath:\"#/properties/cv/additionalProperties\",keyword:\"additionalProperties\",params:{additionalProperty: key3},message:\"must NOT have additional properties\"}];\nreturn false;\nbreak;\n}\n}\nif(_errs45 === errors){\nif(data13.text !== undefined){\nconst _errs46 = errors;\nif(typeof data13.text !== \"string\"){\nvalidate20.errors = [{instancePath:instancePath+\"/cv/text\",schemaPath:\"#/properties/cv/properties/text/type\",keyword:\"type\",params:{type: \"string\"},message:\"must be string\"}];\nreturn false;\n}\nvar valid10 = _errs46 === errors;\n}\nelse {\nvar valid10 = true;\n}\nif(valid10){\nif(data13.filename !== undefined){\nlet data15 = data13.filename;\nconst _errs48 = errors;\nif((typeof data15 !== \"string\") && (data15 !== null)){\nvalidate20.errors = [{instancePath:instancePath+\"/cv/filename\",schemaPath:\"#/properties/cv/properties/filename/type\",keyword:\"type\",params:{type: schema31.properties.cv.properties.filename.type},message:\"must be string,null\"}];\nreturn false;\n}\nvar valid10 = _errs48 === errors;\n}\nelse {\nvar valid10 = true;\n}\nif(valid10){\nif(data13.mime !== undefined){\nlet data16 = data13.mime;\nconst _errs50 = errors;\nif((typeof data16 !== \"string\") && (data16 !== null)){\nvalidate20.errors = [{instancePath:instancePath+\"/cv/mime\",schemaPath:\"#/properties/cv/properties/mime/type\",keyword:\"type\",params:{type: schema31.properties.cv.properties.mime.type},message:\"must be string,null\"}];\nreturn false;\n}\nvar valid10 = _errs50 === errors;\n}\nelse {\nvar valid10 = true;\n}\nif(valid10){\nif(data13.sha256 !== undefined){\nlet data17 = data13.sha256;\nconst _errs52 = errors;\nconst _errs53 = errors;\nif(errors === _errs53){\nif(typeof data17 === \"string\"){\nif(!pattern6.test(data17)){\nvalidate20.errors = [{instancePath:instancePath+\"/cv/sha256\",schemaPath:\"common.schema.json#/$defs/sha256/pattern\",keyword:\"pattern\",params:{pattern: \"^[a-f0-9]{64}$\"},message:\"must match pattern \\\"\"+\"^[a-f0-9]{64}$\"+\"\\\"\"}];\nreturn false;\n}\n}\nelse {\nvalidate20.errors = [{instancePath:instancePath+\"/cv/sha256\",schemaPath:\"common.schema.json#/$defs/sha256/type\",keyword:\"type\",params:{type: \"string\"},message:\"must be string\"}];\nreturn false;\n}\n}\nvar valid10 = _errs52 === errors;\n}\nelse {\nvar valid10 = true;\n}\nif(valid10){\nif(data13.extraction_method !== undefined){\nlet data18 = data13.extraction_method;\nconst _errs55 = errors;\nif(!((((((data18 === \"provided_text\") || (data18 === \"plain_text\")) || (data18 === \"pdf_text\")) || (data18 === \"docx\")) || (data18 === \"email_body\")) || (data18 === \"none\"))){\nvalidate20.errors = [{instancePath:instancePath+\"/cv/extraction_method\",schemaPath:\"#/properties/cv/properties/extraction_method/enum\",keyword:\"enum\",params:{allowedValues: schema31.properties.cv.properties.extraction_method.enum},message:\"must be equal to one of the allowed values\"}];\nreturn false;\n}\nvar valid10 = _errs55 === errors;\n}\nelse {\nvar valid10 = true;\n}\nif(valid10){\nif(data13.extraction_error !== undefined){\nlet data19 = data13.extraction_error;\nconst _errs56 = errors;\nif((typeof data19 !== \"string\") && (data19 !== null)){\nvalidate20.errors = [{instancePath:instancePath+\"/cv/extraction_error\",schemaPath:\"#/properties/cv/properties/extraction_error/type\",keyword:\"type\",params:{type: schema31.properties.cv.properties.extraction_error.type},message:\"must be string,null\"}];\nreturn false;\n}\nvar valid10 = _errs56 === errors;\n}\nelse {\nvar valid10 = true;\n}\nif(valid10){\nif(data13.char_count !== undefined){\nlet data20 = data13.char_count;\nconst _errs58 = errors;\nif(!(((typeof data20 == \"number\") && (!(data20 % 1) && !isNaN(data20))) && (isFinite(data20)))){\nvalidate20.errors = [{instancePath:instancePath+\"/cv/char_count\",schemaPath:\"#/properties/cv/properties/char_count/type\",keyword:\"type\",params:{type: \"integer\"},message:\"must be integer\"}];\nreturn false;\n}\nif(errors === _errs58){\nif((typeof data20 == \"number\") && (isFinite(data20))){\nif(data20 < 0 || isNaN(data20)){\nvalidate20.errors = [{instancePath:instancePath+\"/cv/char_count\",schemaPath:\"#/properties/cv/properties/char_count/minimum\",keyword:\"minimum\",params:{comparison: \">=\", limit: 0},message:\"must be >= 0\"}];\nreturn false;\n}\n}\n}\nvar valid10 = _errs58 === errors;\n}\nelse {\nvar valid10 = true;\n}\n}\n}\n}\n}\n}\n}\n}\n}\n}\nelse {\nvalidate20.errors = [{instancePath:instancePath+\"/cv\",schemaPath:\"#/properties/cv/type\",keyword:\"type\",params:{type: \"object\"},message:\"must be object\"}];\nreturn false;\n}\n}\nvar valid0 = _errs43 === errors;\n}\nelse {\nvar valid0 = true;\n}\nif(valid0){\nif(data.idempotency_key !== undefined){\nlet data21 = data.idempotency_key;\nconst _errs60 = errors;\nif(errors === _errs60){\nif(typeof data21 === \"string\"){\nif(func2(data21) < 8){\nvalidate20.errors = [{instancePath:instancePath+\"/idempotency_key\",schemaPath:\"#/properties/idempotency_key/minLength\",keyword:\"minLength\",params:{limit: 8},message:\"must NOT have fewer than 8 characters\"}];\nreturn false;\n}\n}\nelse {\nvalidate20.errors = [{instancePath:instancePath+\"/idempotency_key\",schemaPath:\"#/properties/idempotency_key/type\",keyword:\"type\",params:{type: \"string\"},message:\"must be string\"}];\nreturn false;\n}\n}\nvar valid0 = _errs60 === errors;\n}\nelse {\nvar valid0 = true;\n}\nif(valid0){\nif(data.source_ref !== undefined){\nlet data22 = data.source_ref;\nconst _errs62 = errors;\nif((typeof data22 !== \"string\") && (data22 !== null)){\nvalidate20.errors = [{instancePath:instancePath+\"/source_ref\",schemaPath:\"#/properties/source_ref/type\",keyword:\"type\",params:{type: schema31.properties.source_ref.type},message:\"must be string,null\"}];\nreturn false;\n}\nvar valid0 = _errs62 === errors;\n}\nelse {\nvar valid0 = true;\n}\nif(valid0){\nif(data.duplicate_of !== undefined){\nlet data23 = data.duplicate_of;\nconst _errs64 = errors;\nconst _errs65 = errors;\nlet valid12 = false;\nconst _errs66 = errors;\nconst _errs67 = errors;\nif(errors === _errs67){\nif(typeof data23 === \"string\"){\nif(func2(data23) > 64){\nconst err11 = {instancePath:instancePath+\"/duplicate_of\",schemaPath:\"common.schema.json#/$defs/application_id/maxLength\",keyword:\"maxLength\",params:{limit: 64},message:\"must NOT have more than 64 characters\"};\nif(vErrors === null){\nvErrors = [err11];\n}\nelse {\nvErrors.push(err11);\n}\nerrors++;\n}\nelse {\nif(func2(data23) < 1){\nconst err12 = {instancePath:instancePath+\"/duplicate_of\",schemaPath:\"common.schema.json#/$defs/application_id/minLength\",keyword:\"minLength\",params:{limit: 1},message:\"must NOT have fewer than 1 characters\"};\nif(vErrors === null){\nvErrors = [err12];\n}\nelse {\nvErrors.push(err12);\n}\nerrors++;\n}\n}\n}\nelse {\nconst err13 = {instancePath:instancePath+\"/duplicate_of\",schemaPath:\"common.schema.json#/$defs/application_id/type\",keyword:\"type\",params:{type: \"string\"},message:\"must be string\"};\nif(vErrors === null){\nvErrors = [err13];\n}\nelse {\nvErrors.push(err13);\n}\nerrors++;\n}\n}\nvar _valid3 = _errs66 === errors;\nvalid12 = valid12 || _valid3;\nconst _errs69 = errors;\nif(data23 !== null){\nconst err14 = {instancePath:instancePath+\"/duplicate_of\",schemaPath:\"#/properties/duplicate_of/anyOf/1/type\",keyword:\"type\",params:{type: \"null\"},message:\"must be null\"};\nif(vErrors === null){\nvErrors = [err14];\n}\nelse {\nvErrors.push(err14);\n}\nerrors++;\n}\nvar _valid3 = _errs69 === errors;\nvalid12 = valid12 || _valid3;\nif(!valid12){\nconst err15 = {instancePath:instancePath+\"/duplicate_of\",schemaPath:\"#/properties/duplicate_of/anyOf\",keyword:\"anyOf\",params:{},message:\"must match a schema in anyOf\"};\nif(vErrors === null){\nvErrors = [err15];\n}\nelse {\nvErrors.push(err15);\n}\nerrors++;\nvalidate20.errors = vErrors;\nreturn false;\n}\nelse {\nerrors = _errs65;\nif(vErrors !== null){\nif(_errs65){\nvErrors.length = _errs65;\n}\nelse {\nvErrors = null;\n}\n}\n}\nvar valid0 = _errs64 === errors;\n}\nelse {\nvar valid0 = true;\n}\n}\n}\n}\n}\n}\n}\n}\n}\n}\n}\n}\n}\n}\nelse {\nvalidate20.errors = [{instancePath,schemaPath:\"#/type\",keyword:\"type\",params:{type: \"object\"},message:\"must be object\"}];\nreturn false;\n}\n}\nvalidate20.errors = vErrors;\nreturn errors === 0;\n}\nvalidate20.evaluated = {\"props\":true,\"dynamicProps\":false,\"dynamicItems\":false};\n  },\n  \"ajv/dist/runtime/ucs2length\": function (module, exports, require) {\n\"use strict\";\nObject.defineProperty(exports, \"__esModule\", { value: true });\n// https://mathiasbynens.be/notes/javascript-encoding\n// https://github.com/bestiejs/punycode.js - punycode.ucs2.decode\nfunction ucs2length(str) {\n    const len = str.length;\n    let length = 0;\n    let pos = 0;\n    let value;\n    while (pos < len) {\n        length++;\n        value = str.charCodeAt(pos++);\n        if (value >= 0xd800 && value <= 0xdbff && pos < len) {\n            // high surrogate, and there is a next character\n            value = str.charCodeAt(pos);\n            if ((value & 0xfc00) === 0xdc00)\n                pos++; // low surrogate\n        }\n    }\n    return length;\n}\nexports.default = ucs2length;\nucs2length.code = 'require(\"ajv/dist/runtime/ucs2length\").default';\n//# sourceMappingURL=ucs2length.js.map\n  },\n  };\n  const cache = {};\n  const resolve = (from, req) => {\n    if (!req.startsWith('.')) return req;\n    const parts = (from.includes('/') ? from.slice(0, from.lastIndexOf('/')) : '.').split('/');\n    for (const seg of req.replace(/\\.js$/, '').split('/')) { if (seg === '..') parts.pop(); else if (seg !== '.') parts.push(seg); }\n    const id = parts.join('/');\n    return id.startsWith('.') ? id : './' + id;\n  };\n  const load = (id) => {\n    if (cache[id]) return cache[id].exports;\n    if (!defs[id]) throw new Error('bundled module not found: ' + id);\n    const module = { exports: {} };\n    cache[id] = module;\n    defs[id](module, module.exports, (req) => load(resolve(id, req)));\n    return module.exports;\n  };\n  return (req) => load(resolve('./x', req));\n})();\n// @bundle-end\n// @bundle-end\n// Input: { application: ApplicationReceived, trigger: 'crm_webhook' | 'email' | 'replay' }\nconst validate = __require('./generated/validators/application_received');\nconst valid = validate($json.application);\nreturn {\n  json: {\n    ...$json,\n    valid,\n    validation_errors: valid ? [] : (validate.errors || []).slice(0, 5).map((e) => `${e.instancePath || '/'} ${e.message}`),\n  },\n};",
+        "mode": "runOnceForEachItem"
+      },
+      "position": [
+        220,
+        300
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    }
+  ],
+  "published": true,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
