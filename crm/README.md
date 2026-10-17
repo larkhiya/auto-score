@@ -38,7 +38,7 @@ AI outcomes ──► SCREENING                              re-screen (e.g. aft
 | GET | `/candidates/:id[?history=true]` | one candidate (+ status history) |
 | PATCH | `/candidates/:id` | body: a **CrmUpdate** (contract). Headers: `Idempotency-Key`, `X-Expected-Status` |
 | GET | `/review-queue` | NEEDS_REVIEW candidates |
-| POST/GET | `/dead-letters`, `POST /dead-letters/:id/replayed` | dead-letter queue (WF-90, replay) |
+| POST/GET | `/dead-letters`, `POST /dead-letters/:id/replayed` | **unused since D-028**: the dead-letter queue lives in n8n (Data Table `dead_letters`) so it stays writable when the CRM is down |
 | POST/GET | `/run-logs` | RunLog per execution (contract-validated) |
 | GET | `/stats` | counts by job and status, open dead letters, webhook deliveries |
 | GET/POST | `/admin/chaos` | `{fail_rate, latency_ms, fail_after_rate}` at runtime |

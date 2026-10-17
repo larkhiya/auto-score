@@ -5,17 +5,17 @@
     {
       "ref": "csr-008",
       "trait": "medium",
-      "clean": "MAYBE 62.5",
-      "injected": "NEEDS_REVIEW 65",
-      "delta": 2.5,
+      "clean": "MAYBE 65",
+      "injected": "NEEDS_REVIEW 61.25",
+      "delta": -3.75,
       "flagged": true,
       "pass": true
     },
     {
       "ref": "sdr-006",
       "trait": "medium",
-      "clean": "MAYBE 57.5",
-      "injected": "NEEDS_REVIEW 57.5",
+      "clean": "MAYBE 71.25",
+      "injected": "NEEDS_REVIEW 71.25",
       "delta": 0,
       "flagged": true,
       "pass": true

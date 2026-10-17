@@ -1,0 +1,37 @@
+{
+  "at": "2026-10-17T15:38:53.675Z",
+  "chaos": {
+    "fail_rate": 1,
+    "latency_ms": 0,
+    "fail_after_rate": 0
+  },
+  "stop_crm_after": null,
+  "records_in": 2,
+  "records_out": 2,
+  "by_status": {
+    "NEW": 2
+  },
+  "final": 0,
+  "error": 0,
+  "pending_with_dead_letter": 2,
+  "lost": [],
+  "dead_letters_new": 2,
+  "dead_letters": [
+    {
+      "application_id": "app_000135",
+      "error_code": "CRM_UNAVAILABLE",
+      "crm_marked": false,
+      "notified": true
+    },
+    {
+      "application_id": "app_000136",
+      "error_code": "CRM_UNAVAILABLE",
+      "crm_marked": false,
+      "notified": true
+    }
+  ],
+  "refs": [
+    "sdr-024",
+    "sdr-025"
+  ]
+}

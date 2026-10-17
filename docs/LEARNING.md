@@ -27,9 +27,9 @@ Under D-008 (straight-through build), each phase's concepts are marked ⏭ when 
 | C-20 | Fairness and bias in hiring automation | 5, 7 | blind orchestra auditions | ⏭ | |
 | C-21 | Prompt and profile versioning | 5, 7 | numbered recipe revisions | ⏭ | |
 | C-22 | State machines for statuses | 2, 6 | parcel tracking: never "delivered" back to "ordered" | ⏭ | |
-| C-23 | Retries, backoff and timeouts | 6 | redialing a busy line with longer pauses | ⬜ | |
-| C-24 | Error workflows and dead-letter queues | 6 | the post office's undeliverable-mail bin | ⬜ | |
-| C-25 | Human in the loop | 6 | autopilot with a pilot in the seat | ⬜ | |
+| C-23 | Retries, backoff and timeouts | 6 | redialing a busy line with longer pauses | ⏭ | |
+| C-24 | Error workflows and dead-letter queues | 6 | the post office's undeliverable-mail bin | ⏭ | |
+| C-25 | Human in the loop | 6 | autopilot with a pilot in the seat | ⏭ | |
 | C-26 | Testing pyramid for automations | 8 | check each brick, then the wall, then the house | ⬜ | |
 | C-27 | Evals: accuracy and consistency | 8 | a scale: right weight? same weight three times? | ⬜ | |
 | C-28 | Observability: logs, execution IDs, metrics | 8 | a flight data recorder | ⬜ | |
@@ -40,6 +40,14 @@ Under D-008 (straight-through build), each phase's concepts are marked ⏭ when 
 | C-33 | AI-drafted config with human approval, then frozen | 7 | a junior drafts the contract, a manager signs it, nobody edits the signed copy | ⬜ | |
 
 ## Concept break notes (newest first)
+### C-22 (in depth), C-23, C-24, C-25 · 2026-10-17 (Phase 6)
+- Deferred under D-008. Review-pass pointers:
+  - C-23: `src/retry.js` + WF-11. Retry 429/5xx/timeouts with doubling waits plus jitter, never other 4xx. Question: why does retrying a 422 make things worse, not better?
+  - C-24: WF-91 and the `dead_letters` Data Table. Why does the queue live in n8n, not the CRM? (Hint: what's down in the scenario that needs it?) Evidence: total-outage smoke, 2 records → 2 dead letters with `crm_marked: false`, then replayed.
+  - C-22: replay claims ERROR → SCREENING with compare-and-set, so replaying twice is harmless (second run: 0 open).
+  - C-25: NEEDS_REVIEW queue page `/ui/review`; humans alone can ADVANCE or REJECT (D-018).
+  - Instrument bug worth discussing: L-008 (the harness, not the system, was wrong).
+
 ### C-12 to C-21 · 2026-10-17 (Phases 4–5)
 - Deferred under D-008. Review-pass pointers, each tied to evidence from the live runs:
   - C-12, C-14: `src/prefilter.js` (three-valued all/any/not) and `tests/prefilter.test.js` truth tables. Question: why does `all(false, unknown)` give fail, not review?

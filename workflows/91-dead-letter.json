@@ -1,0 +1,515 @@
+{
+  "connections": {
+    "After mark": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Prepare alert",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Build dead letter": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Has CRM record?",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Email ops": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Final row",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Final row": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Insert dead letter",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Has CRM record?": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Mark ERROR in CRM (WF-11)",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Prepare alert",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Insert dead letter": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Run log request",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Mark ERROR in CRM (WF-11)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "After mark",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Prepare alert": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Email ops",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Run log request": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Save run log (WF-11)",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Save run log (WF-11)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Result",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Start": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Build dead letter",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "name": "WF-91 Dead letter",
+  "nodes": [
+    {
+      "id": "97bf1c79-de4b-44b8-b4f1-0cb868c459f5",
+      "name": "After mark",
+      "parameters": {
+        "jsCode": "// Best effort: when the CRM is down this fails, and the row says so (crm_marked: false).\nconst row = ($json.context && $json.context.row) || $('Build dead letter').item.json.row;\nreturn { json: { row: { ...row, crm_marked: $json.ok === true } } };",
+        "mode": "runOnceForEachItem"
+      },
+      "position": [
+        880,
+        200
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "782edd61-d4ec-4278-9d92-22a436c6d0cf",
+      "name": "Build dead letter",
+      "parameters": {
+        "jsCode": "// @bundle-begin ./deadletter\n// GENERATED from src/ by scripts/build-workflows.js. Edit src/, then run npm run build. Do not edit here.\nconst __require = (() => {\n  const defs = {\n  \"./deadletter\": function (module, exports, require) {\n// Dead letters (C-24, D-028). Pure; bundled into WF-91.\n// A dead letter is a failed execution we keep so that it can be understood and replayed later.\n// It lives in an n8n Data Table, NOT the CRM: it must be writable while the CRM is down.\n\nconst MAX_PAYLOAD_CHARS = 60000;\n\n// Turns an error message into a short, stable code for filtering and alerts.\nfunction classifyError(message) {\n  const m = String(message || '');\n  if (/LLM unavailable|LLM_UNAVAILABLE/i.test(m)) return 'LLM_UNAVAILABLE';\n  if (/RETRIES_EXHAUSTED|could not load|claim failed|write-back failed|could not create the CRM record/i.test(m)) return 'CRM_UNAVAILABLE';\n  if (/contract/i.test(m)) return 'CONTRACT_VIOLATION';\n  if (/invalid application/i.test(m)) return 'INVALID_INPUT';\n  return 'UNEXPECTED_ERROR';\n}\n\nfunction truncate(s, n) {\n  const str = String(s == null ? '' : s);\n  return str.length > n ? `${str.slice(0, n)}…[${str.length - n} more chars]` : str;\n}\n\n// input: { source_workflow, failed_execution_id, stage, error, application?, payload? }\nfunction buildDeadLetter(input, now = new Date().toISOString()) {\n  const app = input.application || null;\n  const message = typeof input.error === 'string' ? input.error : (input.error && input.error.message) || 'unknown error';\n  return {\n    application_id: app ? app.application_id : null,\n    job_id: app ? app.job_id : null,\n    source_workflow: input.source_workflow || 'unknown',\n    failed_execution_id: input.failed_execution_id ? String(input.failed_execution_id) : null,\n    stage: input.stage || 'unknown',\n    error_code: classifyError(message),\n    error: truncate(message, 2000),\n    payload: truncate(JSON.stringify(app || input.payload || null), MAX_PAYLOAD_CHARS),\n    status: 'open',\n    crm_marked: false,\n    notified: false,\n    created_at: now,\n    replay_execution_id: null,\n    replayed_at: null,\n  };\n}\n\n// The CrmUpdate that marks the record ERROR (allowed from NEW or SCREENING). Contract-valid.\nfunction errorUpdate(application, row, executionId, now = new Date().toISOString()) {\n  return {\n    schema_version: '1.0.0', application_id: application.application_id, status: 'ERROR',\n    total_score: null, breakdown: null, summary: `Processing failed (${row.error_code}); queued for replay. ${row.error}`.slice(0, 600),\n    reason_codes: [row.error_code], flags: [],\n    job_id: application.job_id || null, job_profile_version: null, prompt_version: null, model: null,\n    execution_id: String(executionId), processed_at: now, idempotency_key: application.idempotency_key,\n  };\n}\n\nfunction notification(row) {\n  return {\n    subject: `[auto-score] ${row.error_code} in ${row.source_workflow}${row.application_id ? ` for ${row.application_id}` : ''}`,\n    text: [\n      `A record could not be processed and was dead-lettered.`,\n      ``,\n      `Application: ${row.application_id || '(unknown)'} · job ${row.job_id || '-'}`,\n      `Workflow:    ${row.source_workflow} (stage ${row.stage}), failed execution ${row.failed_execution_id || '-'}`,\n      `Error:       ${row.error}`,\n      `CRM marked ERROR: ${row.crm_marked ? 'yes' : 'NO (CRM unreachable?)'}`,\n      ``,\n      `Replay when the cause is fixed: node scripts/replay-dlq.js`,\n    ].join('\\n'),\n  };\n}\n\nmodule.exports = { classifyError, buildDeadLetter, errorUpdate, notification, MAX_PAYLOAD_CHARS };\n  },\n  };\n  const cache = {};\n  const resolve = (from, req) => {\n    if (!req.startsWith('.')) return req;\n    const parts = (from.includes('/') ? from.slice(0, from.lastIndexOf('/')) : '.').split('/');\n    for (const seg of req.replace(/\\.js$/, '').split('/')) { if (seg === '..') parts.pop(); else if (seg !== '.') parts.push(seg); }\n    const id = parts.join('/');\n    return id.startsWith('.') ? id : './' + id;\n  };\n  const load = (id) => {\n    if (cache[id]) return cache[id].exports;\n    if (!defs[id]) throw new Error('bundled module not found: ' + id);\n    const module = { exports: {} };\n    cache[id] = module;\n    defs[id](module, module.exports, (req) => load(resolve(id, req)));\n    return module.exports;\n  };\n  return (req) => load(resolve('./x', req));\n})();\n// @bundle-end\n// @bundle-end\n// Input: { source_workflow, failed_execution_id, stage, error, application?, payload? }\n// The row is written LAST with its final flags; every step before it is built never to throw.\nconst { buildDeadLetter, errorUpdate } = __require('./deadletter');\nconst row = buildDeadLetter($json);\nconst a = $json.application;\nif (!a || !a.application_id || !a.idempotency_key) return { json: { route: 'skip', row } };\nreturn { json: { route: 'mark', row,\n  request: { method: 'PATCH', path: '/candidates/' + a.application_id, body: errorUpdate(a, row, $execution.id),\n    headers: { 'idempotency-key': a.idempotency_key + ':ERROR:' + $execution.id } },\n  context: { row } } };",
+        "mode": "runOnceForEachItem"
+      },
+      "position": [
+        220,
+        300
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "smtp": {
+          "name": "GreenMail SMTP (test)"
+        }
+      },
+      "id": "54ec4c42-96bd-46ff-a831-9d60e0892d96",
+      "name": "Email ops",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "emailFormat": "text",
+        "fromEmail": "alerts@autoscore.test",
+        "options": {
+          "appendAttribution": false
+        },
+        "subject": "={{ $json.mail.subject }}",
+        "text": "={{ $json.mail.text }}",
+        "toEmail": "ops@autoscore.test"
+      },
+      "position": [
+        1320,
+        300
+      ],
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "webhookId": "29db0312-473a-4d62-8362-7db8b0ccda96"
+    },
+    {
+      "id": "890bf0d3-ee42-4ebe-8e0f-dafa29304bdf",
+      "name": "Final row",
+      "parameters": {
+        "jsCode": "const row = $('Prepare alert').item.json.row;\nreturn { json: { ...row, notified: !$json.error } };",
+        "mode": "runOnceForEachItem"
+      },
+      "position": [
+        1540,
+        300
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "c312dfd5-4f59-4141-b554-7a62c61b9217",
+      "name": "Has CRM record?",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "b357d586-8d07-4942-9b52-e961e5c2a4ed",
+              "leftValue": "={{ $json.route }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "mark"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "looseTypeValidation": false,
+        "options": {}
+      },
+      "position": [
+        440,
+        300
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
+    },
+    {
+      "id": "9979bbf1-0c97-4c38-8011-fd1c723afd5a",
+      "name": "Insert dead letter",
+      "parameters": {
+        "columns": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "application_id",
+              "id": "application_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "job_id",
+              "id": "job_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "source_workflow",
+              "id": "source_workflow",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "failed_execution_id",
+              "id": "failed_execution_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "stage",
+              "id": "stage",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "error_code",
+              "id": "error_code",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "error",
+              "id": "error",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "payload",
+              "id": "payload",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "status",
+              "id": "status",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "crm_marked",
+              "id": "crm_marked",
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "notified",
+              "id": "notified",
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "created_at",
+              "id": "created_at",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "replay_execution_id",
+              "id": "replay_execution_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "replayed_at",
+              "id": "replayed_at",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "application_id": "={{ $json.application_id }}",
+            "created_at": "={{ $json.created_at }}",
+            "crm_marked": "={{ $json.crm_marked }}",
+            "error": "={{ $json.error }}",
+            "error_code": "={{ $json.error_code }}",
+            "failed_execution_id": "={{ $json.failed_execution_id }}",
+            "job_id": "={{ $json.job_id }}",
+            "notified": "={{ $json.notified }}",
+            "payload": "={{ $json.payload }}",
+            "replay_execution_id": "={{ $json.replay_execution_id }}",
+            "replayed_at": "={{ $json.replayed_at }}",
+            "source_workflow": "={{ $json.source_workflow }}",
+            "stage": "={{ $json.stage }}",
+            "status": "={{ $json.status }}"
+          }
+        },
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "dead_letters"
+        },
+        "operation": "insert",
+        "options": {},
+        "resource": "row"
+      },
+      "position": [
+        1760,
+        300
+      ],
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1
+    },
+    {
+      "id": "794fcd44-0e44-42fc-9cf7-c2f822c7a6cf",
+      "name": "Mark ERROR in CRM (WF-11)",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        },
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "cachedResultName": "WF-11 CRM request",
+          "mode": "list",
+          "value": "@name:WF-11 CRM request"
+        }
+      },
+      "position": [
+        660,
+        200
+      ],
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4
+    },
+    {
+      "id": "d6dd59f5-106b-4c84-89bb-eece3b1464b4",
+      "name": "Prepare alert",
+      "parameters": {
+        "jsCode": "// @bundle-begin ./deadletter\n// GENERATED from src/ by scripts/build-workflows.js. Edit src/, then run npm run build. Do not edit here.\nconst __require = (() => {\n  const defs = {\n  \"./deadletter\": function (module, exports, require) {\n// Dead letters (C-24, D-028). Pure; bundled into WF-91.\n// A dead letter is a failed execution we keep so that it can be understood and replayed later.\n// It lives in an n8n Data Table, NOT the CRM: it must be writable while the CRM is down.\n\nconst MAX_PAYLOAD_CHARS = 60000;\n\n// Turns an error message into a short, stable code for filtering and alerts.\nfunction classifyError(message) {\n  const m = String(message || '');\n  if (/LLM unavailable|LLM_UNAVAILABLE/i.test(m)) return 'LLM_UNAVAILABLE';\n  if (/RETRIES_EXHAUSTED|could not load|claim failed|write-back failed|could not create the CRM record/i.test(m)) return 'CRM_UNAVAILABLE';\n  if (/contract/i.test(m)) return 'CONTRACT_VIOLATION';\n  if (/invalid application/i.test(m)) return 'INVALID_INPUT';\n  return 'UNEXPECTED_ERROR';\n}\n\nfunction truncate(s, n) {\n  const str = String(s == null ? '' : s);\n  return str.length > n ? `${str.slice(0, n)}…[${str.length - n} more chars]` : str;\n}\n\n// input: { source_workflow, failed_execution_id, stage, error, application?, payload? }\nfunction buildDeadLetter(input, now = new Date().toISOString()) {\n  const app = input.application || null;\n  const message = typeof input.error === 'string' ? input.error : (input.error && input.error.message) || 'unknown error';\n  return {\n    application_id: app ? app.application_id : null,\n    job_id: app ? app.job_id : null,\n    source_workflow: input.source_workflow || 'unknown',\n    failed_execution_id: input.failed_execution_id ? String(input.failed_execution_id) : null,\n    stage: input.stage || 'unknown',\n    error_code: classifyError(message),\n    error: truncate(message, 2000),\n    payload: truncate(JSON.stringify(app || input.payload || null), MAX_PAYLOAD_CHARS),\n    status: 'open',\n    crm_marked: false,\n    notified: false,\n    created_at: now,\n    replay_execution_id: null,\n    replayed_at: null,\n  };\n}\n\n// The CrmUpdate that marks the record ERROR (allowed from NEW or SCREENING). Contract-valid.\nfunction errorUpdate(application, row, executionId, now = new Date().toISOString()) {\n  return {\n    schema_version: '1.0.0', application_id: application.application_id, status: 'ERROR',\n    total_score: null, breakdown: null, summary: `Processing failed (${row.error_code}); queued for replay. ${row.error}`.slice(0, 600),\n    reason_codes: [row.error_code], flags: [],\n    job_id: application.job_id || null, job_profile_version: null, prompt_version: null, model: null,\n    execution_id: String(executionId), processed_at: now, idempotency_key: application.idempotency_key,\n  };\n}\n\nfunction notification(row) {\n  return {\n    subject: `[auto-score] ${row.error_code} in ${row.source_workflow}${row.application_id ? ` for ${row.application_id}` : ''}`,\n    text: [\n      `A record could not be processed and was dead-lettered.`,\n      ``,\n      `Application: ${row.application_id || '(unknown)'} · job ${row.job_id || '-'}`,\n      `Workflow:    ${row.source_workflow} (stage ${row.stage}), failed execution ${row.failed_execution_id || '-'}`,\n      `Error:       ${row.error}`,\n      `CRM marked ERROR: ${row.crm_marked ? 'yes' : 'NO (CRM unreachable?)'}`,\n      ``,\n      `Replay when the cause is fixed: node scripts/replay-dlq.js`,\n    ].join('\\n'),\n  };\n}\n\nmodule.exports = { classifyError, buildDeadLetter, errorUpdate, notification, MAX_PAYLOAD_CHARS };\n  },\n  };\n  const cache = {};\n  const resolve = (from, req) => {\n    if (!req.startsWith('.')) return req;\n    const parts = (from.includes('/') ? from.slice(0, from.lastIndexOf('/')) : '.').split('/');\n    for (const seg of req.replace(/\\.js$/, '').split('/')) { if (seg === '..') parts.pop(); else if (seg !== '.') parts.push(seg); }\n    const id = parts.join('/');\n    return id.startsWith('.') ? id : './' + id;\n  };\n  const load = (id) => {\n    if (cache[id]) return cache[id].exports;\n    if (!defs[id]) throw new Error('bundled module not found: ' + id);\n    const module = { exports: {} };\n    cache[id] = module;\n    defs[id](module, module.exports, (req) => load(resolve(id, req)));\n    return module.exports;\n  };\n  return (req) => load(resolve('./x', req));\n})();\n// @bundle-end\n// @bundle-end\nconst { notification } = __require('./deadletter');\nreturn { json: { row: $json.row, mail: notification($json.row) } };",
+        "mode": "runOnceForEachItem"
+      },
+      "position": [
+        1100,
+        300
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "7d7a5416-6674-44cf-8043-a12ac4a59df0",
+      "name": "Result",
+      "parameters": {
+        "jsCode": "const row = $('Final row').item.json;\nreturn { json: { dead_lettered: true, row_id: $('Insert dead letter').item.json.id ?? null, application_id: row.application_id,\n  error_code: row.error_code, crm_marked: row.crm_marked, notified: row.notified, run_log_saved: $json.ok === true } };",
+        "mode": "runOnceForEachItem"
+      },
+      "position": [
+        2420,
+        300
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "4c05ed56-5f21-454c-ba71-e82856ca9717",
+      "name": "Run log request",
+      "parameters": {
+        "jsCode": "// @bundle-begin ./generated/validators/run_log\n// GENERATED from src/ by scripts/build-workflows.js. Edit src/, then run npm run build. Do not edit here.\nconst __require = (() => {\n  const defs = {\n  \"./generated/validators/run_log\": function (module, exports, require) {\n// GENERATED by scripts/build-validators.js from contracts/run_log.schema.json (schema_version 1.0.0). Do not edit.\n\"use strict\";\nmodule.exports = validate36;\nmodule.exports.default = validate36;\nconst schema72 = {\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"$id\":\"https://auto-score.local/contracts/run_log.schema.json\",\"title\":\"RunLog\",\"description\":\"One record per pipeline execution: what ran, how long each stage took, what it cost, how it ended. Records in = records out is checked against these.\",\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"schema_version\",\"execution_id\",\"workflow\",\"application_id\",\"job_id\",\"started_at\",\"finished_at\",\"stage_timings_ms\",\"llm\",\"outcome\",\"error\"],\"properties\":{\"schema_version\":{\"const\":\"1.0.0\"},\"execution_id\":{\"type\":\"string\",\"minLength\":1},\"workflow\":{\"type\":\"string\",\"minLength\":1},\"application_id\":{\"anyOf\":[{\"$ref\":\"common.schema.json#/$defs/application_id\"},{\"type\":\"null\"}]},\"job_id\":{\"anyOf\":[{\"$ref\":\"common.schema.json#/$defs/job_id\"},{\"type\":\"null\"}]},\"started_at\":{\"$ref\":\"common.schema.json#/$defs/timestamp\"},\"finished_at\":{\"$ref\":\"common.schema.json#/$defs/timestamp\"},\"stage_timings_ms\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"number\",\"minimum\":0}},\"llm\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"calls\",\"input_tokens\",\"output_tokens\",\"model\",\"cost_estimate_usd\"],\"properties\":{\"calls\":{\"type\":\"integer\",\"minimum\":0},\"input_tokens\":{\"type\":\"integer\",\"minimum\":0},\"output_tokens\":{\"type\":\"integer\",\"minimum\":0},\"model\":{\"type\":[\"string\",\"null\"]},\"cost_estimate_usd\":{\"type\":\"number\",\"minimum\":0}}},\"outcome\":{\"enum\":[\"SHORTLISTED\",\"MAYBE\",\"NOT_A_FIT\",\"NEEDS_REVIEW\",\"PREFILTER_REJECTED\",\"ERROR\",\"DUPLICATE_SKIPPED\"]},\"error\":{\"anyOf\":[{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"message\",\"node\"],\"properties\":{\"message\":{\"type\":\"string\"},\"node\":{\"type\":[\"string\",\"null\"]},\"type\":{\"type\":[\"string\",\"null\"]}}},{\"type\":\"null\"}]}}};\nconst schema33 = {\"type\":\"string\",\"minLength\":1,\"maxLength\":64};\nconst schema35 = {\"description\":\"Short slug for a role, e.g. csr, sdr, admin.\",\"type\":\"string\",\"pattern\":\"^[a-z][a-z0-9_-]{1,31}$\"};\nconst schema34 = {\"description\":\"ISO 8601 in UTC, e.g. 2026-10-17T09:30:00Z or with milliseconds.\",\"type\":\"string\",\"pattern\":\"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\\\.[0-9]{1,6})?Z$\"};\nconst func1 = Object.prototype.hasOwnProperty;\nconst func2 = require(\"ajv/dist/runtime/ucs2length\").default;\nconst pattern5 = new RegExp(\"^[a-z][a-z0-9_-]{1,31}$\", \"u\");\nconst pattern4 = new RegExp(\"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\\\.[0-9]{1,6})?Z$\", \"u\");\n\nfunction validate36(data, {instancePath=\"\", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){\n/*# sourceURL=\"https://auto-score.local/contracts/run_log.schema.json\" */;\nlet vErrors = null;\nlet errors = 0;\nconst evaluated0 = validate36.evaluated;\nif(evaluated0.dynamicProps){\nevaluated0.props = undefined;\n}\nif(evaluated0.dynamicItems){\nevaluated0.items = undefined;\n}\nif(errors === 0){\nif(data && typeof data == \"object\" && !Array.isArray(data)){\nlet missing0;\nif((((((((((((data.schema_version === undefined) && (missing0 = \"schema_version\")) || ((data.execution_id === undefined) && (missing0 = \"execution_id\"))) || ((data.workflow === undefined) && (missing0 = \"workflow\"))) || ((data.application_id === undefined) && (missing0 = \"application_id\"))) || ((data.job_id === undefined) && (missing0 = \"job_id\"))) || ((data.started_at === undefined) && (missing0 = \"started_at\"))) || ((data.finished_at === undefined) && (missing0 = \"finished_at\"))) || ((data.stage_timings_ms === undefined) && (missing0 = \"stage_timings_ms\"))) || ((data.llm === undefined) && (missing0 = \"llm\"))) || ((data.outcome === undefined) && (missing0 = \"outcome\"))) || ((data.error === undefined) && (missing0 = \"error\"))){\nvalidate36.errors = [{instancePath,schemaPath:\"#/required\",keyword:\"required\",params:{missingProperty: missing0},message:\"must have required property '\"+missing0+\"'\"}];\nreturn false;\n}\nelse {\nconst _errs1 = errors;\nfor(const key0 in data){\nif(!(func1.call(schema72.properties, key0))){\nvalidate36.errors = [{instancePath,schemaPath:\"#/additionalProperties\",keyword:\"additionalProperties\",params:{additionalProperty: key0},message:\"must NOT have additional properties\"}];\nreturn false;\nbreak;\n}\n}\nif(_errs1 === errors){\nif(data.schema_version !== undefined){\nconst _errs2 = errors;\nif(\"1.0.0\" !== data.schema_version){\nvalidate36.errors = [{instancePath:instancePath+\"/schema_version\",schemaPath:\"#/properties/schema_version/const\",keyword:\"const\",params:{allowedValue: \"1.0.0\"},message:\"must be equal to constant\"}];\nreturn false;\n}\nvar valid0 = _errs2 === errors;\n}\nelse {\nvar valid0 = true;\n}\nif(valid0){\nif(data.execution_id !== undefined){\nlet data1 = data.execution_id;\nconst _errs3 = errors;\nif(errors === _errs3){\nif(typeof data1 === \"string\"){\nif(func2(data1) < 1){\nvalidate36.errors = [{instancePath:instancePath+\"/execution_id\",schemaPath:\"#/properties/execution_id/minLength\",keyword:\"minLength\",params:{limit: 1},message:\"must NOT have fewer than 1 characters\"}];\nreturn false;\n}\n}\nelse {\nvalidate36.errors = [{instancePath:instancePath+\"/execution_id\",schemaPath:\"#/properties/execution_id/type\",keyword:\"type\",params:{type: \"string\"},message:\"must be string\"}];\nreturn false;\n}\n}\nvar valid0 = _errs3 === errors;\n}\nelse {\nvar valid0 = true;\n}\nif(valid0){\nif(data.workflow !== undefined){\nlet data2 = data.workflow;\nconst _errs5 = errors;\nif(errors === _errs5){\nif(typeof data2 === \"string\"){\nif(func2(data2) < 1){\nvalidate36.errors = [{instancePath:instancePath+\"/workflow\",schemaPath:\"#/properties/workflow/minLength\",keyword:\"minLength\",params:{limit: 1},message:\"must NOT have fewer than 1 characters\"}];\nreturn false;\n}\n}\nelse {\nvalidate36.errors = [{instancePath:instancePath+\"/workflow\",schemaPath:\"#/properties/workflow/type\",keyword:\"type\",params:{type: \"string\"},message:\"must be string\"}];\nreturn false;\n}\n}\nvar valid0 = _errs5 === errors;\n}\nelse {\nvar valid0 = true;\n}\nif(valid0){\nif(data.application_id !== undefined){\nlet data3 = data.application_id;\nconst _errs7 = errors;\nconst _errs8 = errors;\nlet valid1 = false;\nconst _errs9 = errors;\nconst _errs10 = errors;\nif(errors === _errs10){\nif(typeof data3 === \"string\"){\nif(func2(data3) > 64){\nconst err0 = {instancePath:instancePath+\"/application_id\",schemaPath:\"common.schema.json#/$defs/application_id/maxLength\",keyword:\"maxLength\",params:{limit: 64},message:\"must NOT have more than 64 characters\"};\nif(vErrors === null){\nvErrors = [err0];\n}\nelse {\nvErrors.push(err0);\n}\nerrors++;\n}\nelse {\nif(func2(data3) < 1){\nconst err1 = {instancePath:instancePath+\"/application_id\",schemaPath:\"common.schema.json#/$defs/application_id/minLength\",keyword:\"minLength\",params:{limit: 1},message:\"must NOT have fewer than 1 characters\"};\nif(vErrors === null){\nvErrors = [err1];\n}\nelse {\nvErrors.push(err1);\n}\nerrors++;\n}\n}\n}\nelse {\nconst err2 = {instancePath:instancePath+\"/application_id\",schemaPath:\"common.schema.json#/$defs/application_id/type\",keyword:\"type\",params:{type: \"string\"},message:\"must be string\"};\nif(vErrors === null){\nvErrors = [err2];\n}\nelse {\nvErrors.push(err2);\n}\nerrors++;\n}\n}\nvar _valid0 = _errs9 === errors;\nvalid1 = valid1 || _valid0;\nconst _errs12 = errors;\nif(data3 !== null){\nconst err3 = {instancePath:instancePath+\"/application_id\",schemaPath:\"#/properties/application_id/anyOf/1/type\",keyword:\"type\",params:{type: \"null\"},message:\"must be null\"};\nif(vErrors === null){\nvErrors = [err3];\n}\nelse {\nvErrors.push(err3);\n}\nerrors++;\n}\nvar _valid0 = _errs12 === errors;\nvalid1 = valid1 || _valid0;\nif(!valid1){\nconst err4 = {instancePath:instancePath+\"/application_id\",schemaPath:\"#/properties/application_id/anyOf\",keyword:\"anyOf\",params:{},message:\"must match a schema in anyOf\"};\nif(vErrors === null){\nvErrors = [err4];\n}\nelse {\nvErrors.push(err4);\n}\nerrors++;\nvalidate36.errors = vErrors;\nreturn false;\n}\nelse {\nerrors = _errs8;\nif(vErrors !== null){\nif(_errs8){\nvErrors.length = _errs8;\n}\nelse {\nvErrors = null;\n}\n}\n}\nvar valid0 = _errs7 === errors;\n}\nelse {\nvar valid0 = true;\n}\nif(valid0){\nif(data.job_id !== undefined){\nlet data4 = data.job_id;\nconst _errs14 = errors;\nconst _errs15 = errors;\nlet valid3 = false;\nconst _errs16 = errors;\nconst _errs17 = errors;\nif(errors === _errs17){\nif(typeof data4 === \"string\"){\nif(!pattern5.test(data4)){\nconst err5 = {instancePath:instancePath+\"/job_id\",schemaPath:\"common.schema.json#/$defs/job_id/pattern\",keyword:\"pattern\",params:{pattern: \"^[a-z][a-z0-9_-]{1,31}$\"},message:\"must match pattern \\\"\"+\"^[a-z][a-z0-9_-]{1,31}$\"+\"\\\"\"};\nif(vErrors === null){\nvErrors = [err5];\n}\nelse {\nvErrors.push(err5);\n}\nerrors++;\n}\n}\nelse {\nconst err6 = {instancePath:instancePath+\"/job_id\",schemaPath:\"common.schema.json#/$defs/job_id/type\",keyword:\"type\",params:{type: \"string\"},message:\"must be string\"};\nif(vErrors === null){\nvErrors = [err6];\n}\nelse {\nvErrors.push(err6);\n}\nerrors++;\n}\n}\nvar _valid1 = _errs16 === errors;\nvalid3 = valid3 || _valid1;\nconst _errs19 = errors;\nif(data4 !== null){\nconst err7 = {instancePath:instancePath+\"/job_id\",schemaPath:\"#/properties/job_id/anyOf/1/type\",keyword:\"type\",params:{type: \"null\"},message:\"must be null\"};\nif(vErrors === null){\nvErrors = [err7];\n}\nelse {\nvErrors.push(err7);\n}\nerrors++;\n}\nvar _valid1 = _errs19 === errors;\nvalid3 = valid3 || _valid1;\nif(!valid3){\nconst err8 = {instancePath:instancePath+\"/job_id\",schemaPath:\"#/properties/job_id/anyOf\",keyword:\"anyOf\",params:{},message:\"must match a schema in anyOf\"};\nif(vErrors === null){\nvErrors = [err8];\n}\nelse {\nvErrors.push(err8);\n}\nerrors++;\nvalidate36.errors = vErrors;\nreturn false;\n}\nelse {\nerrors = _errs15;\nif(vErrors !== null){\nif(_errs15){\nvErrors.length = _errs15;\n}\nelse {\nvErrors = null;\n}\n}\n}\nvar valid0 = _errs14 === errors;\n}\nelse {\nvar valid0 = true;\n}\nif(valid0){\nif(data.started_at !== undefined){\nlet data5 = data.started_at;\nconst _errs21 = errors;\nconst _errs22 = errors;\nif(errors === _errs22){\nif(typeof data5 === \"string\"){\nif(!pattern4.test(data5)){\nvalidate36.errors = [{instancePath:instancePath+\"/started_at\",schemaPath:\"common.schema.json#/$defs/timestamp/pattern\",keyword:\"pattern\",params:{pattern: \"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\\\.[0-9]{1,6})?Z$\"},message:\"must match pattern \\\"\"+\"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\\\.[0-9]{1,6})?Z$\"+\"\\\"\"}];\nreturn false;\n}\n}\nelse {\nvalidate36.errors = [{instancePath:instancePath+\"/started_at\",schemaPath:\"common.schema.json#/$defs/timestamp/type\",keyword:\"type\",params:{type: \"string\"},message:\"must be string\"}];\nreturn false;\n}\n}\nvar valid0 = _errs21 === errors;\n}\nelse {\nvar valid0 = true;\n}\nif(valid0){\nif(data.finished_at !== undefined){\nlet data6 = data.finished_at;\nconst _errs24 = errors;\nconst _errs25 = errors;\nif(errors === _errs25){\nif(typeof data6 === \"string\"){\nif(!pattern4.test(data6)){\nvalidate36.errors = [{instancePath:instancePath+\"/finished_at\",schemaPath:\"common.schema.json#/$defs/timestamp/pattern\",keyword:\"pattern\",params:{pattern: \"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\\\.[0-9]{1,6})?Z$\"},message:\"must match pattern \\\"\"+\"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\\\.[0-9]{1,6})?Z$\"+\"\\\"\"}];\nreturn false;\n}\n}\nelse {\nvalidate36.errors = [{instancePath:instancePath+\"/finished_at\",schemaPath:\"common.schema.json#/$defs/timestamp/type\",keyword:\"type\",params:{type: \"string\"},message:\"must be string\"}];\nreturn false;\n}\n}\nvar valid0 = _errs24 === errors;\n}\nelse {\nvar valid0 = true;\n}\nif(valid0){\nif(data.stage_timings_ms !== undefined){\nlet data7 = data.stage_timings_ms;\nconst _errs27 = errors;\nif(errors === _errs27){\nif(data7 && typeof data7 == \"object\" && !Array.isArray(data7)){\nfor(const key1 in data7){\nlet data8 = data7[key1];\nconst _errs30 = errors;\nif(errors === _errs30){\nif((typeof data8 == \"number\") && (isFinite(data8))){\nif(data8 < 0 || isNaN(data8)){\nvalidate36.errors = [{instancePath:instancePath+\"/stage_timings_ms/\" + key1.replace(/~/g, \"~0\").replace(/\\//g, \"~1\"),schemaPath:\"#/properties/stage_timings_ms/additionalProperties/minimum\",keyword:\"minimum\",params:{comparison: \">=\", limit: 0},message:\"must be >= 0\"}];\nreturn false;\n}\n}\nelse {\nvalidate36.errors = [{instancePath:instancePath+\"/stage_timings_ms/\" + key1.replace(/~/g, \"~0\").replace(/\\//g, \"~1\"),schemaPath:\"#/properties/stage_timings_ms/additionalProperties/type\",keyword:\"type\",params:{type: \"number\"},message:\"must be number\"}];\nreturn false;\n}\n}\nvar valid7 = _errs30 === errors;\nif(!valid7){\nbreak;\n}\n}\n}\nelse {\nvalidate36.errors = [{instancePath:instancePath+\"/stage_timings_ms\",schemaPath:\"#/properties/stage_timings_ms/type\",keyword:\"type\",params:{type: \"object\"},message:\"must be object\"}];\nreturn false;\n}\n}\nvar valid0 = _errs27 === errors;\n}\nelse {\nvar valid0 = true;\n}\nif(valid0){\nif(data.llm !== undefined){\nlet data9 = data.llm;\nconst _errs32 = errors;\nif(errors === _errs32){\nif(data9 && typeof data9 == \"object\" && !Array.isArray(data9)){\nlet missing1;\nif((((((data9.calls === undefined) && (missing1 = \"calls\")) || ((data9.input_tokens === undefined) && (missing1 = \"input_tokens\"))) || ((data9.output_tokens === undefined) && (missing1 = \"output_tokens\"))) || ((data9.model === undefined) && (missing1 = \"model\"))) || ((data9.cost_estimate_usd === undefined) && (missing1 = \"cost_estimate_usd\"))){\nvalidate36.errors = [{instancePath:instancePath+\"/llm\",schemaPath:\"#/properties/llm/required\",keyword:\"required\",params:{missingProperty: missing1},message:\"must have required property '\"+missing1+\"'\"}];\nreturn false;\n}\nelse {\nconst _errs34 = errors;\nfor(const key2 in data9){\nif(!(((((key2 === \"calls\") || (key2 === \"input_tokens\")) || (key2 === \"output_tokens\")) || (key2 === \"model\")) || (key2 === \"cost_estimate_usd\"))){\nvalidate36.errors = [{instancePath:instancePath+\"/llm\",schemaPath:\"#/properties/llm/additionalProperties\",keyword:\"additionalProperties\",params:{additionalProperty: key2},message:\"must NOT have additional properties\"}];\nreturn false;\nbreak;\n}\n}\nif(_errs34 === errors){\nif(data9.calls !== undefined){\nlet data10 = data9.calls;\nconst _errs35 = errors;\nif(!(((typeof data10 == \"number\") && (!(data10 % 1) && !isNaN(data10))) && (isFinite(data10)))){\nvalidate36.errors = [{instancePath:instancePath+\"/llm/calls\",schemaPath:\"#/properties/llm/properties/calls/type\",keyword:\"type\",params:{type: \"integer\"},message:\"must be integer\"}];\nreturn false;\n}\nif(errors === _errs35){\nif((typeof data10 == \"number\") && (isFinite(data10))){\nif(data10 < 0 || isNaN(data10)){\nvalidate36.errors = [{instancePath:instancePath+\"/llm/calls\",schemaPath:\"#/properties/llm/properties/calls/minimum\",keyword:\"minimum\",params:{comparison: \">=\", limit: 0},message:\"must be >= 0\"}];\nreturn false;\n}\n}\n}\nvar valid8 = _errs35 === errors;\n}\nelse {\nvar valid8 = true;\n}\nif(valid8){\nif(data9.input_tokens !== undefined){\nlet data11 = data9.input_tokens;\nconst _errs37 = errors;\nif(!(((typeof data11 == \"number\") && (!(data11 % 1) && !isNaN(data11))) && (isFinite(data11)))){\nvalidate36.errors = [{instancePath:instancePath+\"/llm/input_tokens\",schemaPath:\"#/properties/llm/properties/input_tokens/type\",keyword:\"type\",params:{type: \"integer\"},message:\"must be integer\"}];\nreturn false;\n}\nif(errors === _errs37){\nif((typeof data11 == \"number\") && (isFinite(data11))){\nif(data11 < 0 || isNaN(data11)){\nvalidate36.errors = [{instancePath:instancePath+\"/llm/input_tokens\",schemaPath:\"#/properties/llm/properties/input_tokens/minimum\",keyword:\"minimum\",params:{comparison: \">=\", limit: 0},message:\"must be >= 0\"}];\nreturn false;\n}\n}\n}\nvar valid8 = _errs37 === errors;\n}\nelse {\nvar valid8 = true;\n}\nif(valid8){\nif(data9.output_tokens !== undefined){\nlet data12 = data9.output_tokens;\nconst _errs39 = errors;\nif(!(((typeof data12 == \"number\") && (!(data12 % 1) && !isNaN(data12))) && (isFinite(data12)))){\nvalidate36.errors = [{instancePath:instancePath+\"/llm/output_tokens\",schemaPath:\"#/properties/llm/properties/output_tokens/type\",keyword:\"type\",params:{type: \"integer\"},message:\"must be integer\"}];\nreturn false;\n}\nif(errors === _errs39){\nif((typeof data12 == \"number\") && (isFinite(data12))){\nif(data12 < 0 || isNaN(data12)){\nvalidate36.errors = [{instancePath:instancePath+\"/llm/output_tokens\",schemaPath:\"#/properties/llm/properties/output_tokens/minimum\",keyword:\"minimum\",params:{comparison: \">=\", limit: 0},message:\"must be >= 0\"}];\nreturn false;\n}\n}\n}\nvar valid8 = _errs39 === errors;\n}\nelse {\nvar valid8 = true;\n}\nif(valid8){\nif(data9.model !== undefined){\nlet data13 = data9.model;\nconst _errs41 = errors;\nif((typeof data13 !== \"string\") && (data13 !== null)){\nvalidate36.errors = [{instancePath:instancePath+\"/llm/model\",schemaPath:\"#/properties/llm/properties/model/type\",keyword:\"type\",params:{type: schema72.properties.llm.properties.model.type},message:\"must be string,null\"}];\nreturn false;\n}\nvar valid8 = _errs41 === errors;\n}\nelse {\nvar valid8 = true;\n}\nif(valid8){\nif(data9.cost_estimate_usd !== undefined){\nlet data14 = data9.cost_estimate_usd;\nconst _errs43 = errors;\nif(errors === _errs43){\nif((typeof data14 == \"number\") && (isFinite(data14))){\nif(data14 < 0 || isNaN(data14)){\nvalidate36.errors = [{instancePath:instancePath+\"/llm/cost_estimate_usd\",schemaPath:\"#/properties/llm/properties/cost_estimate_usd/minimum\",keyword:\"minimum\",params:{comparison: \">=\", limit: 0},message:\"must be >= 0\"}];\nreturn false;\n}\n}\nelse {\nvalidate36.errors = [{instancePath:instancePath+\"/llm/cost_estimate_usd\",schemaPath:\"#/properties/llm/properties/cost_estimate_usd/type\",keyword:\"type\",params:{type: \"number\"},message:\"must be number\"}];\nreturn false;\n}\n}\nvar valid8 = _errs43 === errors;\n}\nelse {\nvar valid8 = true;\n}\n}\n}\n}\n}\n}\n}\n}\nelse {\nvalidate36.errors = [{instancePath:instancePath+\"/llm\",schemaPath:\"#/properties/llm/type\",keyword:\"type\",params:{type: \"object\"},message:\"must be object\"}];\nreturn false;\n}\n}\nvar valid0 = _errs32 === errors;\n}\nelse {\nvar valid0 = true;\n}\nif(valid0){\nif(data.outcome !== undefined){\nlet data15 = data.outcome;\nconst _errs45 = errors;\nif(!(((((((data15 === \"SHORTLISTED\") || (data15 === \"MAYBE\")) || (data15 === \"NOT_A_FIT\")) || (data15 === \"NEEDS_REVIEW\")) || (data15 === \"PREFILTER_REJECTED\")) || (data15 === \"ERROR\")) || (data15 === \"DUPLICATE_SKIPPED\"))){\nvalidate36.errors = [{instancePath:instancePath+\"/outcome\",schemaPath:\"#/properties/outcome/enum\",keyword:\"enum\",params:{allowedValues: schema72.properties.outcome.enum},message:\"must be equal to one of the allowed values\"}];\nreturn false;\n}\nvar valid0 = _errs45 === errors;\n}\nelse {\nvar valid0 = true;\n}\nif(valid0){\nif(data.error !== undefined){\nlet data16 = data.error;\nconst _errs46 = errors;\nconst _errs47 = errors;\nlet valid9 = false;\nconst _errs48 = errors;\nif(errors === _errs48){\nif(data16 && typeof data16 == \"object\" && !Array.isArray(data16)){\nlet missing2;\nif(((data16.message === undefined) && (missing2 = \"message\")) || ((data16.node === undefined) && (missing2 = \"node\"))){\nconst err9 = {instancePath:instancePath+\"/error\",schemaPath:\"#/properties/error/anyOf/0/required\",keyword:\"required\",params:{missingProperty: missing2},message:\"must have required property '\"+missing2+\"'\"};\nif(vErrors === null){\nvErrors = [err9];\n}\nelse {\nvErrors.push(err9);\n}\nerrors++;\n}\nelse {\nconst _errs50 = errors;\nfor(const key3 in data16){\nif(!(((key3 === \"message\") || (key3 === \"node\")) || (key3 === \"type\"))){\nconst err10 = {instancePath:instancePath+\"/error\",schemaPath:\"#/properties/error/anyOf/0/additionalProperties\",keyword:\"additionalProperties\",params:{additionalProperty: key3},message:\"must NOT have additional properties\"};\nif(vErrors === null){\nvErrors = [err10];\n}\nelse {\nvErrors.push(err10);\n}\nerrors++;\nbreak;\n}\n}\nif(_errs50 === errors){\nif(data16.message !== undefined){\nconst _errs51 = errors;\nif(typeof data16.message !== \"string\"){\nconst err11 = {instancePath:instancePath+\"/error/message\",schemaPath:\"#/properties/error/anyOf/0/properties/message/type\",keyword:\"type\",params:{type: \"string\"},message:\"must be string\"};\nif(vErrors === null){\nvErrors = [err11];\n}\nelse {\nvErrors.push(err11);\n}\nerrors++;\n}\nvar valid10 = _errs51 === errors;\n}\nelse {\nvar valid10 = true;\n}\nif(valid10){\nif(data16.node !== undefined){\nlet data18 = data16.node;\nconst _errs53 = errors;\nif((typeof data18 !== \"string\") && (data18 !== null)){\nconst err12 = {instancePath:instancePath+\"/error/node\",schemaPath:\"#/properties/error/anyOf/0/properties/node/type\",keyword:\"type\",params:{type: schema72.properties.error.anyOf[0].properties.node.type},message:\"must be string,null\"};\nif(vErrors === null){\nvErrors = [err12];\n}\nelse {\nvErrors.push(err12);\n}\nerrors++;\n}\nvar valid10 = _errs53 === errors;\n}\nelse {\nvar valid10 = true;\n}\nif(valid10){\nif(data16.type !== undefined){\nlet data19 = data16.type;\nconst _errs55 = errors;\nif((typeof data19 !== \"string\") && (data19 !== null)){\nconst err13 = {instancePath:instancePath+\"/error/type\",schemaPath:\"#/properties/error/anyOf/0/properties/type/type\",keyword:\"type\",params:{type: schema72.properties.error.anyOf[0].properties.type.type},message:\"must be string,null\"};\nif(vErrors === null){\nvErrors = [err13];\n}\nelse {\nvErrors.push(err13);\n}\nerrors++;\n}\nvar valid10 = _errs55 === errors;\n}\nelse {\nvar valid10 = true;\n}\n}\n}\n}\n}\n}\nelse {\nconst err14 = {instancePath:instancePath+\"/error\",schemaPath:\"#/properties/error/anyOf/0/type\",keyword:\"type\",params:{type: \"object\"},message:\"must be object\"};\nif(vErrors === null){\nvErrors = [err14];\n}\nelse {\nvErrors.push(err14);\n}\nerrors++;\n}\n}\nvar _valid2 = _errs48 === errors;\nvalid9 = valid9 || _valid2;\nconst _errs57 = errors;\nif(data16 !== null){\nconst err15 = {instancePath:instancePath+\"/error\",schemaPath:\"#/properties/error/anyOf/1/type\",keyword:\"type\",params:{type: \"null\"},message:\"must be null\"};\nif(vErrors === null){\nvErrors = [err15];\n}\nelse {\nvErrors.push(err15);\n}\nerrors++;\n}\nvar _valid2 = _errs57 === errors;\nvalid9 = valid9 || _valid2;\nif(!valid9){\nconst err16 = {instancePath:instancePath+\"/error\",schemaPath:\"#/properties/error/anyOf\",keyword:\"anyOf\",params:{},message:\"must match a schema in anyOf\"};\nif(vErrors === null){\nvErrors = [err16];\n}\nelse {\nvErrors.push(err16);\n}\nerrors++;\nvalidate36.errors = vErrors;\nreturn false;\n}\nelse {\nerrors = _errs47;\nif(vErrors !== null){\nif(_errs47){\nvErrors.length = _errs47;\n}\nelse {\nvErrors = null;\n}\n}\n}\nvar valid0 = _errs46 === errors;\n}\nelse {\nvar valid0 = true;\n}\n}\n}\n}\n}\n}\n}\n}\n}\n}\n}\n}\n}\n}\nelse {\nvalidate36.errors = [{instancePath,schemaPath:\"#/type\",keyword:\"type\",params:{type: \"object\"},message:\"must be object\"}];\nreturn false;\n}\n}\nvalidate36.errors = vErrors;\nreturn errors === 0;\n}\nvalidate36.evaluated = {\"props\":true,\"dynamicProps\":false,\"dynamicItems\":false};\n  },\n  \"ajv/dist/runtime/ucs2length\": function (module, exports, require) {\n\"use strict\";\nObject.defineProperty(exports, \"__esModule\", { value: true });\n// https://mathiasbynens.be/notes/javascript-encoding\n// https://github.com/bestiejs/punycode.js - punycode.ucs2.decode\nfunction ucs2length(str) {\n    const len = str.length;\n    let length = 0;\n    let pos = 0;\n    let value;\n    while (pos < len) {\n        length++;\n        value = str.charCodeAt(pos++);\n        if (value >= 0xd800 && value <= 0xdbff && pos < len) {\n            // high surrogate, and there is a next character\n            value = str.charCodeAt(pos);\n            if ((value & 0xfc00) === 0xdc00)\n                pos++; // low surrogate\n        }\n    }\n    return length;\n}\nexports.default = ucs2length;\nucs2length.code = 'require(\"ajv/dist/runtime/ucs2length\").default';\n//# sourceMappingURL=ucs2length.js.map\n  },\n  };\n  const cache = {};\n  const resolve = (from, req) => {\n    if (!req.startsWith('.')) return req;\n    const parts = (from.includes('/') ? from.slice(0, from.lastIndexOf('/')) : '.').split('/');\n    for (const seg of req.replace(/\\.js$/, '').split('/')) { if (seg === '..') parts.pop(); else if (seg !== '.') parts.push(seg); }\n    const id = parts.join('/');\n    return id.startsWith('.') ? id : './' + id;\n  };\n  const load = (id) => {\n    if (cache[id]) return cache[id].exports;\n    if (!defs[id]) throw new Error('bundled module not found: ' + id);\n    const module = { exports: {} };\n    cache[id] = module;\n    defs[id](module, module.exports, (req) => load(resolve(id, req)));\n    return module.exports;\n  };\n  return (req) => load(resolve('./x', req));\n})();\n// @bundle-end\n// @bundle-end\n// Every execution leaves a RunLog (C-28). For a failure, outcome ERROR; best effort while the CRM is down.\nconst validate = __require('./generated/validators/run_log');\nconst row = $('Final row').item.json;\nconst now = new Date().toISOString();\nconst log = {\n  schema_version: '1.0.0', execution_id: String(row.failed_execution_id || $execution.id), workflow: row.source_workflow,\n  application_id: row.application_id, job_id: row.job_id, started_at: row.created_at, finished_at: now, stage_timings_ms: {},\n  llm: { calls: 0, input_tokens: 0, output_tokens: 0, model: null, cost_estimate_usd: 0 },\n  outcome: 'ERROR', error: { message: row.error, node: row.stage, type: row.error_code },\n};\nif (!validate(log)) throw new Error('RunLog broke its contract: ' + JSON.stringify(validate.errors.slice(0, 2)));\nreturn { json: { request: { method: 'POST', path: '/run-logs', body: log }, context: { row_id: $json.id, row }, max_attempts: 3 } };",
+        "mode": "runOnceForEachItem"
+      },
+      "position": [
+        1980,
+        300
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "63037428-656f-4f51-bd09-ff798ebe8db1",
+      "name": "Save run log (WF-11)",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        },
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "cachedResultName": "WF-11 CRM request",
+          "mode": "list",
+          "value": "@name:WF-11 CRM request"
+        }
+      },
+      "position": [
+        2200,
+        300
+      ],
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4
+    },
+    {
+      "id": "56ce0f1e-1004-4251-964a-9ab1228decf1",
+      "name": "Start",
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "position": [
+        0,
+        300
+      ],
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3
+    }
+  ],
+  "published": true,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

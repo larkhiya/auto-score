@@ -55,7 +55,14 @@ async function importFiles(files) {
   for (const r of plan) {
     const { body, unresolved } = fromPortable(r.p, { workflowIdByName, credentialIdByTypeAndName });
     if (unresolved.length) console.warn(`warning  ${r.name}: unresolved ${unresolved.join(', ')}`);
-    await api.updateWorkflow(r.id, body);
+    try {
+      await api.updateWorkflow(r.id, body);
+    } catch (e) {
+      // Right after publishing a dependency, n8n can still report it as unpublished for a moment.
+      if (!/no published version|not published/i.test(e.message)) throw e;
+      await new Promise((res) => setTimeout(res, 2000));
+      await api.updateWorkflow(r.id, body);
+    }
     let note = '';
     if (r.published) { await api.publishWorkflow(r.id); note = ' · published'; }
     console.log(`updated  ${r.name} (${r.id})${note}  ← ${path.relative(ROOT, r.file)}`);

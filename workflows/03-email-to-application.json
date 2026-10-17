@@ -65,6 +65,17 @@
         ]
       ]
     },
+    "Dead letter (WF-91)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Dead-lettered",
+            "type": "main"
+          }
+        ]
+      ]
+    },
     "Extract PDF text": {
       "main": [
         [
@@ -92,6 +103,18 @@
             "type": "main"
           }
         ]
+      ]
+    },
+    "Failed?": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Dead letter (WF-91)",
+            "type": "main"
+          }
+        ],
+        []
       ]
     },
     "Get jobs (WF-11)": {
@@ -138,6 +161,17 @@
         ]
       ]
     },
+    "Outcome": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Failed?",
+            "type": "main"
+          }
+        ]
+      ]
+    },
     "PDF failed": {
       "main": [
         [
@@ -166,6 +200,17 @@
           {
             "index": 0,
             "node": "By attachment type",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Screen (WF-10)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Outcome",
             "type": "main"
           }
         ]
@@ -260,6 +305,43 @@
       "typeVersion": 1.4
     },
     {
+      "id": "e8da9557-926d-42a6-83a4-c8e5bb45970a",
+      "name": "Dead letter (WF-91)",
+      "parameters": {
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        },
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "cachedResultName": "WF-91 Dead letter",
+          "mode": "list",
+          "value": "@name:WF-91 Dead letter"
+        }
+      },
+      "position": [
+        2920,
+        200
+      ],
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4
+    },
+    {
+      "id": "5ea365b1-79b7-4828-9cd6-a95f0d7bef6d",
+      "name": "Dead-lettered",
+      "parameters": {
+        "jsCode": "return { json: { outcome: 'DEAD_LETTERED', application_id: $json.application_id } };",
+        "mode": "runOnceForEachItem"
+      },
+      "position": [
+        3140,
+        200
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
       "id": "123933ab-febb-46b7-816a-0c530917af8a",
       "name": "DOCX result",
       "parameters": {
@@ -304,6 +386,40 @@
       ],
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1.1
+    },
+    {
+      "id": "53e54c2f-89cf-42bd-9515-085b5c396674",
+      "name": "Failed?",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "e78cef44-3489-4ae9-b75b-9defa437ee87",
+              "leftValue": "={{ $json.route }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "dead_letter"
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "looseTypeValidation": false,
+        "options": {}
+      },
+      "position": [
+        2700,
+        300
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
     },
     {
       "id": "3fae9899-e706-45ca-8dd2-3c9529638518",
@@ -371,6 +487,20 @@
       "typeVersion": 2
     },
     {
+      "id": "53b6a0a0-3dcf-4c65-ab4a-e74a7b9aa153",
+      "name": "Outcome",
+      "parameters": {
+        "jsCode": "// A failed screening is dead-lettered here, where the application is known (C-24).\nif (!$json.error) return { json: { route: 'done', ...$json } };\nconst msg = typeof $json.error === 'string' ? $json.error : ($json.error.message || JSON.stringify($json.error));\nreturn { json: { route: 'dead_letter', outcome: 'DEAD_LETTERED', application_id: $('Normalize (adapter)').item.json.application.application_id,\n  source_workflow: 'WF-03 Email to application', failed_execution_id: $execution.id, stage: 'WF-10 Screening', error: msg,\n  application: $('Normalize (adapter)').item.json.application } };",
+        "mode": "runOnceForEachItem"
+      },
+      "position": [
+        2480,
+        300
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
       "id": "8de85ac5-24b2-4058-9449-eb3657fe5e16",
       "name": "Parse email",
       "parameters": {
@@ -415,6 +545,7 @@
     {
       "id": "434d7742-9a7a-47bc-95a6-30ce121dc2b9",
       "name": "Screen (WF-10)",
+      "onError": "continueRegularOutput",
       "parameters": {
         "mode": "each",
         "options": {

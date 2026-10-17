@@ -38,7 +38,9 @@ flowchart LR
   PR --> W
   R --> W
   W --> LOG["RunLog"]
-  E["WF-90 · Error Trigger"] -.-> DLQ["ERROR + dead-letter<br/>+ notify (email)"]
+  W -->|"WF-10 failed (caught by caller)"| DL["WF-91 dead letter<br/>n8n Data Table · CRM ERROR (best effort)<br/>· email ops · RunLog"]
+  E["WF-90 · Error Trigger<br/>(uncaught crashes)"] -.-> DL
+  DL -.->|"scripts/replay-dlq.js<br/>application.replay"| A
 ```
 
 ## Components
@@ -51,7 +53,10 @@ flowchart LR
 | WF-11 | CRM call with retry policy | `workflows/11-crm-request.json` | every CRM call goes through here: backoff on 429/5xx/timeouts, never on other 4xx (D-024) |
 | WF-05 | Job profile builder | `workflows/05-job-profile-builder.json` | JD → LLM draft → checks → DRAFT |
 | WF-10 | Screening pipeline | `workflows/10-screening.json` | sub-workflow: validate → dedupe → profile → pre-filter → AI → score → write-back |
-| WF-90 | Error handler | `workflows/90-error-handler.json` | Error Trigger → ERROR, dead-letter, notify |
+| WF-12 | LLM JSON step | `workflows/12-llm-json-step.json` | Gemini `generateContent` (native schema, temp 0) with backoff, contract check, one repair; the only provider-specific workflow (D-007, D-025) |
+| WF-90 | Error handler | `workflows/90-error-handler.json` | Error Trigger → WF-91, for uncaught crashes (error workflow of WF-01 and WF-02) |
+| WF-91 | Dead letter | `workflows/91-dead-letter.json` | n8n Data Table `dead_letters` (works while the CRM is down) + best-effort CRM ERROR + email to ops + RunLog (D-028) |
+| Replay | Dead-letter replay | `scripts/replay-dlq.js` | open rows → ERROR → `application.replay` → WF-10 reclaims ERROR→SCREENING; idempotent |
 | CRM | Mock CRM | `crm/` | Node 24 + Express + `node:sqlite`; REST, webhooks, pages, failure simulation |
 | src | Pure logic | `src/` | inlined into Code nodes by `scripts/build-workflows.js` (drift-tested) |
 | Mail | GreenMail | Compose service `greenmail` | SMTP 3025 and IMAP 3143, test only |

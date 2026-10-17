@@ -1,5 +1,16 @@
 {
   "connections": {
+    "Failed emails": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Dead letter (WF-91)",
+            "type": "main"
+          }
+        ]
+      ]
+    },
     "New email (IMAP)": {
       "main": [
         [
@@ -18,6 +29,11 @@
             "index": 0,
             "node": "Email outcomes",
             "type": "main"
+          },
+          {
+            "index": 0,
+            "node": "Failed emails",
+            "type": "main"
           }
         ]
       ]
@@ -25,6 +41,29 @@
   },
   "name": "WF-02 Intake email",
   "nodes": [
+    {
+      "id": "dd18f82c-9528-4ce6-bc4e-697b8e11adfb",
+      "name": "Dead letter (WF-91)",
+      "parameters": {
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        },
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "cachedResultName": "WF-91 Dead letter",
+          "mode": "list",
+          "value": "@name:WF-91 Dead letter"
+        }
+      },
+      "position": [
+        720,
+        480
+      ],
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4
+    },
     {
       "id": "f436ada4-f443-46ac-ac66-23df2d5e719f",
       "name": "Email outcomes",
@@ -35,6 +74,20 @@
       "position": [
         480,
         300
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "98fedd85-003a-4ed6-b8ff-aab9337894f1",
+      "name": "Failed emails",
+      "parameters": {
+        "jsCode": "// WF-03 failed before it could dead-letter (e.g. the CRM was down when creating the record):\n// keep what we know about the email so it can be re-sent or handled by hand.\nconst out = [];\n$input.all().forEach((it, i) => {\n  if (!it.json.error) return;\n  const m = $('New email (IMAP)').itemMatching(i).json;\n  out.push({ json: { source_workflow: 'WF-03 Email to application', failed_execution_id: $execution.id, stage: 'intake (before CRM record)',\n    error: String(it.json.error.message || it.json.error), application: null,\n    payload: { message_id: m.messageId || null, from: (m.from && m.from.text) || null, to: (m.to && m.to.text) || null, subject: m.subject || null, date: m.date || null } } });\n});\nreturn out;",
+        "mode": "runOnceForAllItems"
+      },
+      "position": [
+        480,
+        480
       ],
       "type": "n8n-nodes-base.code",
       "typeVersion": 2
@@ -93,6 +146,7 @@
   ],
   "published": true,
   "settings": {
+    "errorWorkflow": "@name:WF-90 Error handler",
     "executionOrder": "v1"
   }
 }

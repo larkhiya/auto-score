@@ -1,9 +1,9 @@
 # Progress
-**Current phase:** 6 — CRM write-back and error handling · **Target finish:** straight-through build (D-008) · **Pace:** continuous; learner now doing retrieval questions at session start
+**Current phase:** 7 — Add any role from a job description · **Target finish:** straight-through build (D-008) · **Pace:** continuous; learner now doing retrieval questions at session start
 
 ## Now / Next / Blocked
-- **Now:** Phase 6: WF-90 error workflow (ERROR + dead letter + notify), replay script, FAIL_RATE=0.3 run on 50 records
-- **Next:** Phase 7 (Administrative Assistant from a JD, WF-05 with n8n AI nodes); Phase 8 full eval incl. v1 vs v2 on identical data
+- **Now:** Phase 7: WF-05 job-profile builder (n8n AI nodes), Administrative Assistant JD + biased JD, approval page, JOB_NOT_APPROVED path
+- **Next:** Phase 8 full eval incl. v1 vs v2 on identical data
 - **Blocked:** nothing
 - **Notes:** CRM resets under D-022 on 2026-10-17 (dedupe proof; dataset recalibrations L-005). The dataset was regenerated after the v2 run (long-CV dates), so reseed before Phase 8. The n8n Gemini credential is named "Google Gemini(PaLM) Api account".
 
@@ -16,7 +16,7 @@
 | 3 | Triggers and intake | ✅* | 2026-10-17 | 2026-10-17 | phase-3 |
 | 4 | Boolean pre-filter | ✅* | 2026-10-17 | 2026-10-17 | phase-4 |
 | 5 | AI screening and scoring | ✅* | 2026-10-17 | 2026-10-17 | phase-5 |
-| 6 | CRM write-back and error handling | ⬜ | straight-through | | |
+| 6 | CRM write-back and error handling | ✅* | 2026-10-17 | 2026-10-17 | phase-6 |
 | 7 | Add any role from a job description | ⬜ | straight-through | | |
 | 8 | Prove it works every time | ⬜ | straight-through | | |
 | 9 | Package for portfolio and interviews | ⬜ | straight-through | | |
@@ -65,12 +65,32 @@ Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items m
 - [x] Cost per record recorded: about 3.3k input / 1.5k output tokens, 7–10 s, $0 on the free tier (RunLogs)
 - [x] Learner reviewed the 20-per-role results and chose the fixes (L-005, D-026, D-027)
 
+**Phase 6**
+- [x] Write-back is an idempotent PATCH (Idempotency-Key, compare-and-set claim), and transitions are enforced by the CRM (Phase 2–3 tests)
+- [x] Retries: exponential backoff + jitter on 429/5xx/timeouts, none on other 4xx, 10 s timeouts (`src/retry.js`, WF-11, `tests/retry.test.js`)
+- [x] WF-90 (Error Trigger) and WF-91 (dead letter in an n8n Data Table, best-effort CRM ERROR, email to ops, RunLog), D-028
+- [x] `scripts/replay-dlq.js`, idempotent (a second run found 0 open)
+- [x] RunLog per execution (WF-10 for completed runs, WF-91 for failures)
+- [x] NEEDS_REVIEW queue page `/ui/review`
+- [x] **FAIL_RATE=0.3 on 50 records: 50 in = 50 out, all final, 0 dead letters (retries absorbed every failure); 50/50 agree with the answer key** (`reports/chaos-2026-10-17T15-52-18-943Z.json`)
+- [x] Total outage (fail_rate 1, 2 records): both dead-lettered with `crm_marked: false`, `notified: true`; 2 in = 2 out; replayed to final (`reports/chaos-2026-10-17T15-38-53-675Z.json`)
+- [x] Real outage (CRM container stopped after 2 of 6): 1 final + 5 ERROR with dead letters, 6 in = 6 out; replay moved all 5 to final; 6/6 agree with the answer key (`reports/chaos-2026-10-17T15-54-24-365Z.json`)
+- Observation: a stopped container times out (10 s per try) rather than refusing, so the claim retries lasted about a minute and the CRM was back in time for the ERROR mark. Retry budget vs outage length decides "dead letter" vs "slow success".
+
 ## Learner review pass (D-008), collected as we go
 - Concepts deferred: see LEARNING (`⏭`)
 - Decisions to confirm: D-014 to D-019 (`pending learner review`)
 - Exercises: hello-items item-count prediction (Phase 0); find a loose field in the ScoreCard schema (Phase 1); spot-check 10 answer-key rows (Phase 2)
 
 ## Session log (newest first)
+### S-02 (continued) · 2026-10-17 · Phase 6
+- Done: `src/deadletter.js` (+ tests), `dead_letters` Data Table, WF-91, WF-90, caller dead-lettering in WF-01/WF-03/WF-02, replay events, `scripts/replay-dlq.js`, `scripts/chaos-run.js`, `n8n:drift`
+- Verified (evidence): 3 chaos reports (above); replays 3/3 and 5/5; 152 unit tests; n8n matches git
+- Not yet verified: an email failing before its CRM record exists (manual dead letter path) live; LLM-outage dead letters (only unit-tested classification)
+- Decisions: D-028 · Lessons: L-007, L-008
+- LLM calls this session: about 320 (free tier, $0)
+- Next: Phase 7
+
 ### S-02 · 2026-10-17
 - Done: start-session by hand (the skill wasn't loaded in this session); C-10 retrieval (3 tries → 🟨); Gemini credential linked; WF-10 + WF-12 live; smoke runs; 20-per-role runs with v1 (32/40) and v2 (37/40); injection test; scripts `screen-records`, `show-results`, `injection-test`, `lib/score-direct`
 - Verified (evidence): see the Phase 4 and 5 checklists (RunLogs, `show-results` output, injection report); 146 tests

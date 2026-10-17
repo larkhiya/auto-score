@@ -1,0 +1,60 @@
+{
+  "at": "2026-10-17T15:54:24.365Z",
+  "chaos": {
+    "fail_rate": 0,
+    "latency_ms": 0,
+    "fail_after_rate": 0
+  },
+  "stop_crm_after": 2,
+  "records_in": 6,
+  "records_out": 6,
+  "by_status": {
+    "SHORTLISTED": 1,
+    "ERROR": 5
+  },
+  "final": 1,
+  "error": 5,
+  "pending_with_dead_letter": 0,
+  "lost": [],
+  "dead_letters_new": 5,
+  "dead_letters": [
+    {
+      "application_id": "app_000043",
+      "error_code": "CRM_UNAVAILABLE",
+      "crm_marked": true,
+      "notified": true
+    },
+    {
+      "application_id": "app_000047",
+      "error_code": "CRM_UNAVAILABLE",
+      "crm_marked": true,
+      "notified": true
+    },
+    {
+      "application_id": "app_000050",
+      "error_code": "CRM_UNAVAILABLE",
+      "crm_marked": true,
+      "notified": true
+    },
+    {
+      "application_id": "app_000045",
+      "error_code": "CRM_UNAVAILABLE",
+      "crm_marked": true,
+      "notified": true
+    },
+    {
+      "application_id": "app_000052",
+      "error_code": "CRM_UNAVAILABLE",
+      "crm_marked": true,
+      "notified": true
+    }
+  ],
+  "refs": [
+    "csr-037",
+    "csr-043",
+    "csr-045",
+    "csr-047",
+    "csr-050",
+    "csr-052"
+  ]
+}

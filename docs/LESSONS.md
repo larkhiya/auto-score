@@ -14,6 +14,18 @@ Template:
 
 ---
 
+## L-008 · The failure-injection harness reported a record as LOST that wasn't
+- **Date:** 2026-10-17 · **Phase:** 6 · **Who:** Claude
+- **What happened:** the first `chaos-run.js` (2 records, CRM failing 100%) reported "records in 2 = out 1, LOST: csr-027". csr-027 actually finished as MAYBE seven seconds after the harness reported.
+- **Symptom:** a LOST record whose CRM history showed a normal NEW → SCREENING → MAYBE.
+- **Root cause:** two harness bugs.
+  - It switched chaos off as soon as the webhooks were *sent*, so the "outage" lasted about 10 s instead of covering the processing.
+  - It only waited while a record was SCREENING. csr-027 was still NEW (its claim was retrying), so the harness stopped waiting and judged too early.
+  - Underneath both: I tested the system's failure handling with a harness I hadn't checked against the timeline of the very executions it measured.
+- **Fix:** chaos stays on until every record has *settled* (final, ERROR, or covered by a dead letter), polled with tolerant reads. A total outage is held for a fixed period, then accounted for after chaos is off. The misleading report was deleted. Added a `require.main` guard after a syntax check accidentally ran the script.
+- **Prevention rule:** before trusting a harness verdict, cross-check one surprising result against the system's own records (execution timeline, CRM history). → promoted to Learned Rules: no (covered by L-004: look at the real data)
+- **Concept it illustrates:** C-27 (evals: the measuring instrument can be wrong too)
+
 ## L-007 · Live workflows lagged behind git after a shared src change
 - **Date:** 2026-10-17 · **Phase:** 5 · **Who:** Claude
 - **What happened:** after changing `src/text.js` I ran `npm run build` (which rebuilt the bundles in every workflow file) but imported only WF-10 and WF-12. WF-01 and WF-03 in n8n kept the old bundle.

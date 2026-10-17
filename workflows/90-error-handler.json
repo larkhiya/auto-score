@@ -1,0 +1,83 @@
+{
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "From error event",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "From error event": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Dead letter (WF-91)",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "name": "WF-90 Error handler",
+  "nodes": [
+    {
+      "id": "13e41dd9-d6b8-4e5a-a8eb-8a1c678f7a23",
+      "name": "Dead letter (WF-91)",
+      "parameters": {
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        },
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "cachedResultName": "WF-91 Dead letter",
+          "mode": "list",
+          "value": "@name:WF-91 Dead letter"
+        }
+      },
+      "position": [
+        480,
+        300
+      ],
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4
+    },
+    {
+      "id": "12b92604-6287-47aa-88f2-03db0227d52c",
+      "name": "Error Trigger",
+      "notes": "Runs when a workflow that names WF-90 as its error workflow fails without catching it.",
+      "notesInFlow": true,
+      "parameters": {},
+      "position": [
+        0,
+        300
+      ],
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1
+    },
+    {
+      "id": "6f0e01c4-2448-4fb4-b967-3e5622b0527b",
+      "name": "From error event",
+      "parameters": {
+        "jsCode": "// Uncaught failure somewhere: we know the execution and the error, but not the payload.\n// The execution id links to the full input in the n8n UI.\nconst e = $json.execution || {};\nreturn { json: {\n  source_workflow: ($json.workflow && $json.workflow.name) || 'unknown',\n  failed_execution_id: e.id ?? null,\n  stage: e.lastNodeExecuted || 'unknown',\n  error: (e.error && e.error.message) || 'unknown error',\n  application: null,\n  payload: { execution_url: e.url || null, mode: e.mode || null },\n} };",
+        "mode": "runOnceForEachItem"
+      },
+      "position": [
+        240,
+        300
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    }
+  ],
+  "published": true,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

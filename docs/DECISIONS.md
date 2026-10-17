@@ -12,6 +12,24 @@ Under D-008, Claude makes design choices during the straight-through build and m
 
 ---
 
+## D-028 · Dead letters live in n8n, are written by whoever still holds the payload, and replay via a new event
+- **Date:** 2026-10-17 · **Phase:** 6 · **Status:** pending learner review
+- **Decided by:** Claude (D-008)
+- **Context:** the brief asks for WF-90 to mark the record ERROR, write a dead letter and notify. But "CRM down" is one of the failures to survive, and then anything written TO the CRM fails too. Also, n8n's Error Trigger knows the failed execution but not its input payload.
+- **Options:**
+  - A: dead letters in the CRM (+ one system; − unwritable during a CRM outage, the very case that needs them)
+  - B: dead letters in an n8n Data Table (+ independent of the CRM, no extra infrastructure, readable via the n8n API; − a second place to look)
+  - C: B plus a CRM mirror (− two sources of truth)
+- **Decision:** B.
+  - **WF-91 Dead letter** builds the row, then best-effort marks the CRM record ERROR (WF-11 with retries), emails `ops@autoscore.test` via SMTP (GreenMail), inserts the row with its final flags (`crm_marked`, `notified`), and best-effort saves a RunLog with outcome ERROR.
+  - **Callers dead-letter sub-workflow failures** (WF-01 and WF-03 call WF-10 with "continue on error"), because they still hold the application. WF-02 dead-letters emails that failed before a CRM record existed.
+  - **WF-90**: Error Trigger → WF-91 for uncaught crashes (no payload; the execution id links to it). Set as the error workflow of WF-01 and WF-02.
+  - **Replay** (`scripts/replay-dlq.js`): for each open row, make sure the record is ERROR, send `application.replay` to WF-01, so WF-10 claims ERROR → SCREENING (compare-and-set), then mark the row replayed or retry_failed. Idempotent: the second run found 0 open rows.
+  - The CRM's own `/dead-letters` endpoint is unused (left in the mock; documented).
+- **Evidence:** total-outage smoke (2 records): both NEW + dead letter (crm_marked false, notified true), 2 in = 2 out; replay → 3/3 final; a second replay found nothing to do.
+- **Trade-offs accepted:** if n8n itself is down, nothing runs anyway. An email that fails before a CRM record exists can't be replayed automatically (no attachment kept), so it shows up as a `manual` row.
+- **Revisit if:** moving to n8n queue mode or multiple workers (the DLQ then needs a shared store).
+
 ## D-027 · Cross-applicants stay NOT_A_FIT in the answer key
 - **Date:** 2026-10-17 · **Phase:** 5 · **Status:** accepted
 - **Decided by:** learner (Claude offered "either band is acceptable" as the alternative)

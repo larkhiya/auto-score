@@ -46,6 +46,10 @@ function client() {
     unpublishWorkflow: (id) => call('POST', `/workflows/${id}/unpublish`),
     listCredentials: () => paginate('/credentials'),
     createCredential: (body) => call('POST', '/credentials', body),
+    listDataTables: () => paginate('/data-tables'),
+    createDataTable: (body) => call('POST', '/data-tables', body),
+    listRows: (id, query = '') => call('GET', `/data-tables/${id}/rows?limit=250${query}`),
+    updateRows: (id, body) => call('PATCH', `/data-tables/${id}/rows/update`, body),
     listExecutions: (query = '') => call('GET', `/executions${query}`),
     getExecution: (id, includeData = false) => call('GET', `/executions/${id}?includeData=${includeData}`),
   };
