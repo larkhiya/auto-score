@@ -1,0 +1,125 @@
+{
+  "schema_version": "1.0.0",
+  "job_id": "sdr",
+  "version": 1,
+  "status": "approved",
+  "title": "Sales Development Representative",
+  "source_jd_text": null,
+  "prefilter": {
+    "all": [
+      { "check": "cv_text_min_chars", "value": 300, "reason": "CV_TOO_SHORT" },
+      { "check": "field_includes", "field": "answers.languages", "value": "English", "reason": "NO_ENGLISH" },
+      {
+        "any": [
+          { "check": "keyword", "terms": ["cold call", "cold calling", "outbound", "prospecting", "lead generation", "business development", "appointment setting"] },
+          { "check": "keyword", "terms": ["sales", "quota", "pipeline", "telemarketing", "account executive"] }
+        ],
+        "reason": "NO_SALES_EXPERIENCE"
+      },
+      { "not": { "check": "duplicate" }, "reason": "DUPLICATE_APPLICATION" }
+    ]
+  },
+  "criteria": [
+    {
+      "id": "outbound_prospecting",
+      "name": "Outbound prospecting",
+      "weight": 25,
+      "description": "Starting conversations with new prospects: cold calls, cold emails, social selling, sequences.",
+      "anchors": {
+        "0": "No outbound or prospecting work mentioned.",
+        "1": "Inbound-only sales or a generic claim of being a 'people person'.",
+        "2": "Some outbound activity mentioned (calls or emails) without volume or results.",
+        "3": "Regular outbound prospecting with stated channels and activity levels (e.g. 60 dials a day, multi-step email sequences).",
+        "4": "Sustained, high-volume multi-channel prospecting with specifics: daily activity, meetings booked per month, and refined messaging or sequences."
+      },
+      "evidence_hints": ["cold calls", "dials", "cold email", "sequences", "LinkedIn outreach", "meetings booked", "outbound"],
+      "jd_quote": null
+    },
+    {
+      "id": "quota_attainment",
+      "name": "Quota or target attainment",
+      "weight": 20,
+      "description": "Meeting or beating sales, meeting or pipeline targets, shown with numbers.",
+      "anchors": {
+        "0": "No targets or quota mentioned.",
+        "1": "Says targets were met, with no numbers.",
+        "2": "One target result with a number but no context (period, size of target).",
+        "3": "Quota or target attainment with numbers and period (e.g. 110% of meetings quota in Q2).",
+        "4": "Consistent attainment over several periods with numbers, ranking or awards (e.g. top 3 of 20 reps, President's Club)."
+      },
+      "evidence_hints": ["% of quota", "quota", "target", "pipeline generated", "meetings per month", "President's Club", "ranked"],
+      "jd_quote": null
+    },
+    {
+      "id": "lead_research_qualification",
+      "name": "Lead research and qualification",
+      "weight": 15,
+      "description": "Researching accounts, building lists and qualifying leads before passing them on.",
+      "anchors": {
+        "0": "No research or qualification work mentioned.",
+        "1": "Generic claim of being 'organized' or 'detail-oriented' only.",
+        "2": "Mentions building lead lists or qualifying leads, without a method.",
+        "3": "Describes a qualification method or research process (e.g. BANT, ideal customer profile, account research before calls).",
+        "4": "Clear, repeatable research and qualification practice with results (e.g. improved conversion from meeting to opportunity, built territory plans)."
+      },
+      "evidence_hints": ["BANT", "MEDDIC", "ICP", "ideal customer profile", "account research", "qualified leads", "lead lists"],
+      "jd_quote": null
+    },
+    {
+      "id": "objection_handling_communication",
+      "name": "Objection handling and communication",
+      "weight": 15,
+      "description": "Handling objections and communicating value clearly by phone and in writing.",
+      "anchors": {
+        "0": "No persuasive communication or objection handling mentioned.",
+        "1": "Generic claim of strong communication only.",
+        "2": "Mentions handling objections or pitching, without examples.",
+        "3": "Describes handling common objections or delivering pitches, with an approach or outcome.",
+        "4": "Specific, repeated examples of turning objections into meetings or deals, or writing scripts and training others."
+      },
+      "evidence_hints": ["objection handling", "pitch", "scripts", "discovery calls", "value proposition", "negotiation"],
+      "jd_quote": null
+    },
+    {
+      "id": "sales_tools",
+      "name": "Sales tools",
+      "weight": 15,
+      "description": "CRMs and sales engagement platforms used in prospecting work.",
+      "anchors": {
+        "0": "No sales tools mentioned.",
+        "1": "General office or computer skills only.",
+        "2": "One CRM or sales tool named without how it was used.",
+        "3": "One or more CRM or sales engagement tools named with how they were used (e.g. logging activity in Salesforce, running Outreach sequences).",
+        "4": "Several sales tools used in depth: building sequences, reports or dashboards, list enrichment, or training others."
+      },
+      "evidence_hints": ["Salesforce", "HubSpot", "Outreach", "Salesloft", "Apollo", "LinkedIn Sales Navigator", "ZoomInfo", "Gong"],
+      "jd_quote": null
+    },
+    {
+      "id": "b2b_industry_knowledge",
+      "name": "B2B or industry knowledge",
+      "weight": 10,
+      "description": "Experience selling to businesses, ideally software or services.",
+      "anchors": {
+        "0": "No business-to-business context mentioned.",
+        "1": "Consumer sales only, with no business customers described.",
+        "2": "Some business customers or a related industry, with little detail.",
+        "3": "Sold to businesses, with buyer types or industry named (e.g. SMB SaaS, IT managers).",
+        "4": "Deep B2B knowledge: multiple buyer personas, complex sales cycles, or a clear industry specialism."
+      },
+      "evidence_hints": ["B2B", "SaaS", "SMB", "mid-market", "enterprise", "decision makers", "buyer personas"],
+      "jd_quote": null
+    }
+  ],
+  "nice_to_haves": [
+    { "id": "saas_sales", "name": "SaaS sales", "description": "Has sold software subscriptions." },
+    { "id": "social_selling", "name": "Social selling", "description": "Uses LinkedIn or other social channels to prospect." },
+    { "id": "crm_hygiene", "name": "CRM hygiene", "description": "Keeps CRM data accurate: logging, stage updates, notes." }
+  ],
+  "thresholds": { "shortlist": 75, "maybe": 55, "min_confidence": 0.6 },
+  "bias_flags": [],
+  "created_by": "human",
+  "approved_by": "learner (D-013: brief defaults)",
+  "approved_at": "2026-10-17T00:00:00Z",
+  "created_at": "2026-10-17T00:00:00Z"
+}

@@ -1,0 +1,238 @@
+{
+  "contract": "job_profile",
+  "description": "every criterion needs all five anchors",
+  "expect": {
+    "path": "/criteria/0/anchors",
+    "keyword": "required"
+  },
+  "data": {
+    "schema_version": "1.0.0",
+    "job_id": "csr",
+    "version": 1,
+    "status": "approved",
+    "title": "Customer Service Representative",
+    "source_jd_text": null,
+    "prefilter": {
+      "all": [
+        {
+          "check": "cv_text_min_chars",
+          "value": 300,
+          "reason": "CV_TOO_SHORT"
+        },
+        {
+          "check": "field_equals",
+          "field": "answers.shift_availability",
+          "value": "yes",
+          "reason": "NO_SHIFT_AVAILABILITY"
+        },
+        {
+          "check": "field_includes",
+          "field": "answers.languages",
+          "value": "English",
+          "reason": "NO_ENGLISH"
+        },
+        {
+          "any": [
+            {
+              "check": "keyword",
+              "terms": [
+                "customer service",
+                "customer support",
+                "call center",
+                "call centre",
+                "contact center",
+                "contact centre",
+                "help desk",
+                "helpdesk"
+              ]
+            },
+            {
+              "check": "keyword",
+              "terms": [
+                "retail",
+                "front desk",
+                "hospitality",
+                "cashier"
+              ]
+            }
+          ],
+          "reason": "NO_CUSTOMER_FACING_EXPERIENCE"
+        },
+        {
+          "not": {
+            "check": "duplicate"
+          },
+          "reason": "DUPLICATE_APPLICATION"
+        }
+      ]
+    },
+    "criteria": [
+      {
+        "id": "customer_facing_experience",
+        "name": "Customer-facing experience",
+        "weight": 25,
+        "description": "Paid or substantial volunteer work serving customers directly: support, call or contact centre, retail, hospitality, front desk.",
+        "anchors": {
+          "0": "No customer-facing work mentioned.",
+          "1": "Brief or informal customer contact (a short placement, occasional volunteering) with few details.",
+          "2": "At least one customer-facing role with stated duties, but short or low in detail (channels or volume not described).",
+          "3": "Sustained customer-facing work in one or more roles, with clear duties and channels (phone, chat, email or in person)."
+        },
+        "evidence_hints": [
+          "support agent",
+          "call centre",
+          "contact centre",
+          "customer service",
+          "retail associate",
+          "front desk",
+          "tickets per day",
+          "calls per day"
+        ],
+        "jd_quote": null
+      },
+      {
+        "id": "problem_solving_deescalation",
+        "name": "Problem solving and de-escalation",
+        "weight": 20,
+        "description": "Resolving customer problems and calming difficult situations.",
+        "anchors": {
+          "0": "No evidence of resolving problems or handling difficult customers.",
+          "1": "Generic claim only (e.g. 'good problem solver') with no example.",
+          "2": "Mentions handling complaints, refunds or escalations, without an outcome.",
+          "3": "Describes handling complaints or escalations with a concrete approach or outcome.",
+          "4": "Repeated, specific examples of resolving complex or escalated cases, with measurable outcomes or recognition (e.g. reduced escalations, handled tier-2 cases)."
+        },
+        "evidence_hints": [
+          "escalations",
+          "complaints",
+          "de-escalate",
+          "troubleshoot",
+          "resolved",
+          "refunds",
+          "tier 2"
+        ],
+        "jd_quote": null
+      },
+      {
+        "id": "written_communication",
+        "name": "Written communication",
+        "weight": 15,
+        "description": "Writing to customers through email, chat or tickets, and writing help content.",
+        "anchors": {
+          "0": "No written customer communication mentioned.",
+          "1": "Generic claim of good written skills only.",
+          "2": "Mentions email, chat or ticket work without detail.",
+          "3": "Clear evidence of regular written support (email or chat queues, ticket replies), or written help content.",
+          "4": "Substantial written work with quality evidence: chat or email QA scores, knowledge-base articles or macros written, or training others on written tone."
+        },
+        "evidence_hints": [
+          "live chat",
+          "email support",
+          "tickets",
+          "knowledge base",
+          "macros",
+          "templates"
+        ],
+        "jd_quote": null
+      },
+      {
+        "id": "results_evidence",
+        "name": "Results evidence",
+        "weight": 15,
+        "description": "Measurable support outcomes: CSAT, handle time, first-contact resolution, QA scores.",
+        "anchors": {
+          "0": "No results or metrics mentioned.",
+          "1": "Vague result with no number (e.g. 'customers were happy').",
+          "2": "One metric mentioned without context or target.",
+          "3": "One or two support metrics with numbers (e.g. CSAT 92%, AHT 5 minutes).",
+          "4": "Several specific metrics with numbers and context: targets beaten, sustained over time, or recognized (awards, top performer)."
+        },
+        "evidence_hints": [
+          "CSAT",
+          "NPS",
+          "AHT",
+          "average handle time",
+          "first contact resolution",
+          "FCR",
+          "QA score",
+          "percent figures"
+        ],
+        "jd_quote": null
+      },
+      {
+        "id": "support_tools",
+        "name": "Support tools",
+        "weight": 15,
+        "description": "Ticketing systems, help desks and CRMs used in support work.",
+        "anchors": {
+          "0": "No support tools mentioned.",
+          "1": "General office or computer skills only.",
+          "2": "One support or CRM tool named without how it was used.",
+          "3": "One or more ticketing or CRM tools named with how they were used (e.g. Zendesk queues, Salesforce case notes).",
+          "4": "Several support tools used in depth: configuration, macros or workflows, reporting, or training others on them."
+        },
+        "evidence_hints": [
+          "Zendesk",
+          "Freshdesk",
+          "Salesforce Service Cloud",
+          "HubSpot",
+          "ServiceNow",
+          "Intercom",
+          "Jira Service Management",
+          "Gorgias"
+        ],
+        "jd_quote": null
+      },
+      {
+        "id": "product_industry_familiarity",
+        "name": "Product or industry familiarity",
+        "weight": 10,
+        "description": "Familiarity with software, subscription or e-commerce products and their typical customer issues.",
+        "anchors": {
+          "0": "No product or industry context mentioned.",
+          "1": "Unrelated industry with no transferable product knowledge described.",
+          "2": "Some product knowledge in a different but related setting (e.g. retail electronics, telecom store).",
+          "3": "Supported a software, subscription or e-commerce product, with the product type named.",
+          "4": "Deep product expertise: product specialist or tier-2 role, onboarding customers, or feeding product feedback to engineering."
+        },
+        "evidence_hints": [
+          "SaaS",
+          "subscription",
+          "e-commerce",
+          "onboarding",
+          "product specialist",
+          "billing issues",
+          "bug reports"
+        ],
+        "jd_quote": null
+      }
+    ],
+    "nice_to_haves": [
+      {
+        "id": "second_language",
+        "name": "Second language for support",
+        "description": "Can support customers in a language other than English."
+      },
+      {
+        "id": "support_certification",
+        "name": "Support certification",
+        "description": "A customer-support certification (e.g. HDI, a Zendesk or Salesforce admin badge)."
+      },
+      {
+        "id": "knowledge_base_authoring",
+        "name": "Knowledge-base authoring",
+        "description": "Has written help-centre articles or macros."
+      }
+    ],
+    "thresholds": {
+      "shortlist": 75,
+      "maybe": 55,
+      "min_confidence": 0.6
+    },
+    "bias_flags": [],
+    "created_by": "human",
+    "approved_by": "learner (D-013: brief defaults)",
+    "approved_at": "2026-10-17T00:00:00Z",
+    "created_at": "2026-10-17T00:00:00Z"
+  }
+}

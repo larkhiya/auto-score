@@ -1,0 +1,31 @@
+{
+  "contract": "prefilter_result",
+  "description": "trace results are true, false or unknown",
+  "expect": {
+    "path": "/trace/0/result",
+    "keyword": "enum"
+  },
+  "data": {
+    "schema_version": "1.0.0",
+    "application_id": "app_000123",
+    "job_id": "csr",
+    "job_profile_version": 1,
+    "outcome": "pass",
+    "reason_codes": [],
+    "flags": [],
+    "trace": [
+      {
+        "path": "all",
+        "node": "all",
+        "result": "maybe"
+      },
+      {
+        "path": "all[0]",
+        "node": "cv_text_min_chars",
+        "result": true,
+        "reason": "CV_TOO_SHORT"
+      }
+    ],
+    "evaluated_at": "2026-10-17T09:30:01.250Z"
+  }
+}

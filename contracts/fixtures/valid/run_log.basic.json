@@ -1,0 +1,29 @@
+{
+  "contract": "run_log",
+  "description": "One screening execution",
+  "data": {
+    "schema_version": "1.0.0",
+    "execution_id": "1042",
+    "workflow": "WF-10 Screening",
+    "application_id": "app_000123",
+    "job_id": "csr",
+    "started_at": "2026-10-17T09:30:00Z",
+    "finished_at": "2026-10-17T09:30:09Z",
+    "stage_timings_ms": {
+      "validate": 12,
+      "prefilter": 4,
+      "llm_extract": 3100,
+      "llm_score": 4200,
+      "write_back": 180
+    },
+    "llm": {
+      "calls": 2,
+      "input_tokens": 5400,
+      "output_tokens": 1300,
+      "model": "example-model",
+      "cost_estimate_usd": 0
+    },
+    "outcome": "MAYBE",
+    "error": null
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "contract": "candidate_profile",
+  "description": "evidence quotes must be real excerpts",
+  "expect": {
+    "path": "/tools/0/evidence_quote",
+    "keyword": "minLength"
+  },
+  "data": {
+    "schema_version": "1.0.0",
+    "experience": [
+      {
+        "title": "Customer Support Specialist",
+        "organization": "Northwind Subscriptions",
+        "duration_months": 36,
+        "summary": "Chat and email support for a SaaS billing product.",
+        "evidence_quote": "Handled 60+ live chat and email tickets per day in Zendesk"
+      }
+    ],
+    "skills": [
+      {
+        "name": "De-escalation",
+        "evidence_quote": "De-escalated billing complaints"
+      }
+    ],
+    "tools": [
+      {
+        "name": "Zendesk",
+        "evidence_quote": "ok"
+      }
+    ],
+    "achievements": [
+      {
+        "description": "High customer satisfaction",
+        "metric": "94% CSAT",
+        "evidence_quote": "Kept CSAT at 94% over 18 months"
+      }
+    ],
+    "languages": [
+      {
+        "name": "Spanish",
+        "evidence_quote": "Languages: English, Spanish"
+      }
+    ],
+    "total_experience_months": 60
+  }
+}

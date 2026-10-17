@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://auto-score.local/contracts/score_card.schema.json",
+  "title": "ScoreCard",
+  "description": "LLM call 2: a 0-4 score per rubric criterion with evidence and rationale. The LLM never computes the total or the status; src/scoring.js does. Criterion ids must match the job profile exactly (checked in code, since the set differs per job).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "job_id",
+    "job_profile_version",
+    "criteria",
+    "nice_to_haves_found",
+    "overall_confidence",
+    "flags",
+    "summary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "job_id": {
+      "$ref": "common.schema.json#/$defs/job_id"
+    },
+    "job_profile_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "criteria": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "criterion_id",
+          "score",
+          "evidence_quote",
+          "rationale"
+        ],
+        "properties": {
+          "criterion_id": {
+            "$ref": "common.schema.json#/$defs/criterion_id"
+          },
+          "score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4
+          },
+          "evidence_quote": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/evidence_quote"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 600
+          }
+        },
+        "allOf": [
+          {
+            "description": "Any score above 0 must be backed by a quote: no evidence, no points.",
+            "if": {
+              "properties": {
+                "score": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "evidence_quote": {
+                  "$ref": "common.schema.json#/$defs/evidence_quote"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "nice_to_haves_found": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "evidence_quote"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/criterion_id"
+          },
+          "evidence_quote": {
+            "$ref": "common.schema.json#/$defs/evidence_quote"
+          }
+        }
+      }
+    },
+    "overall_confidence": {
+      "description": "How sure the model is that the CV gave enough information to score fairly (0-1). Below the profile's min_confidence → NEEDS_REVIEW.",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "flags": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "INSUFFICIENT_INFORMATION",
+          "POSSIBLE_INJECTION",
+          "NON_ENGLISH_CV",
+          "INCONSISTENT_DATES",
+          "OTHER_CONCERN"
+        ]
+      }
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 800
+    }
+  }
+}

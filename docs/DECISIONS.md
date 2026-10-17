@@ -12,6 +12,52 @@ Under D-008, Claude makes design choices during the straight-through build and m
 
 ---
 
+## D-017 · Nice-to-haves are flags; low confidence goes to review
+- **Date:** 2026-10-17 · **Phase:** 1 · **Status:** pending learner review
+- **Decided by:** Claude (D-008)
+- **Context:** brief §5.2 leaves open whether nice-to-haves add a bonus, and what counts as "low confidence".
+- **Options:** A: flags only (+ total stays a clean weighted 0–100; − a strong nice-to-have can't lift a borderline candidate) · B: small bonus (+ rewards extras; − totals can pass 100, thresholds blur)
+- **Decision:** A. `nice_to_haves_found` becomes `NICE_TO_HAVE_<ID>` flags on the CrmUpdate. Each profile carries `thresholds.min_confidence` (0.6 for csr/sdr); ScoreCard `overall_confidence` below it → NEEDS_REVIEW.
+- **Why:** keeps the scoring maths explainable (C-17); a recruiter sees the flags anyway.
+- **Revisit if:** recruiters say borderline candidates with key extras are being missed.
+
+## D-016 · Pre-filter is three-valued; "duplicate" has two distinct meanings
+- **Date:** 2026-10-17 · **Phase:** 1 · **Status:** pending learner review
+- **Decided by:** Claude (D-008), fixing audit items 3 and 4
+- **Context:** (3) "missing form answer → review, not fail" breaks with plain booleans: `all(true, false-because-missing)` = fail. (4) Duplicates were checked twice with no stated difference.
+- **Decision:**
+  - Every rule node returns `true`, `false` or `unknown`. `all` is false if any child is false, else unknown if any is unknown. `any` is true if any child is true, else unknown if any is unknown. `not` swaps true and false and keeps unknown. Outcome: true → pass, false → fail, unknown → review.
+  - Every node may carry a `reason` code. PrefilterResult keeps a full `trace`.
+  - **Redelivery** of the same application is handled by `idempotency_key` before the pre-filter: skipped and logged, never re-scored.
+  - **The same person re-applying** to the same job under a new application is set at intake as `duplicate_of`, read by the pre-filter's `duplicate` check → `DUPLICATE_APPLICATION`.
+- **Why:** Kleene three-valued logic is the standard way to reason with missing data. Separating the two duplicates makes each check explainable.
+- **Trade-offs accepted:** a clear fail elsewhere still wins over unknown (`all(false, unknown)` = fail). That's intended: a CV with no relevant experience fails even if form answers are missing.
+- **Revisit if:** recruiters want missing answers to always go to review.
+
+## D-015 · Contracts in JSON Schema 2020-12; validators compiled to standalone code for n8n
+- **Date:** 2026-10-17 · **Phase:** 1 · **Status:** pending learner review
+- **Decided by:** Claude (D-008)
+- **Options:** A: Ajv in Node + Ajv standalone code generation for n8n (+ one source of truth, fast, no runtime dependency in n8n; − generated files to keep in sync) · B: allow `require('ajv')` in Code nodes via `NODE_FUNCTION_ALLOW_EXTERNAL` (− depends on what the runner image ships, and changes in n8n 3.0) · C: hand-written checks in code (− duplicates the schema, drifts)
+- **Decision:** A.
+  - `src/validate.js` (Ajv, strict mode) for tests, scripts and the CRM.
+  - `scripts/build-validators.js` writes `src/generated/validators/<contract>.js`.
+  - Timestamps use a regex instead of `format`, so the generated code is self-contained (only Ajv's `ucs2length` helper is bundled).
+- **Why:** validation at every boundary with the exact same rules everywhere.
+- **Revisit if:** n8n ships schema validation as a built-in node feature.
+
+## D-014 · Keeping `src/` and n8n Code nodes in sync: a bundler + drift test
+- **Date:** 2026-10-17 · **Phase:** 1 · **Status:** pending learner review
+- **Decided by:** Claude (D-008), fixing audit item 1
+- **Context:** CLAUDE.md requires Code-node logic to live in `src/` as tested pure functions. n8n 2.x runs Code nodes in a task-runner sandbox that can't load local files.
+- **Options:**
+  - A: bundle `src/` modules into the Code node's `jsCode` between `// @bundle-begin <entries>` and `// @bundle-end` markers, with a drift test (+ works with stock n8n, src stays plain CommonJS; − workflow JSON grows by the bundled code)
+  - B: custom runners image with our package installed and allow-listed (+ small Code nodes; − custom image, version-locked to n8n, harder to explain)
+  - C: paste by hand (− drifts silently)
+- **Decision:** A. `scripts/lib/bundle.js` is a ~60-line CommonJS loader exposing `__require`. `npm run build` refreshes all blocks; `npm test` fails if any block or generated validator is stale. A test runs the bundle in a bare `vm` context (no `require`, no `module`) to match the sandbox. Bundling a module that needs Node built-ins fails the build, so src stays pure.
+- **Why:** reproducible with the stock n8n image, and easy to defend: "the tested code IS the code that runs".
+- **Trade-offs accepted:** editing a bundled block in the n8n editor is wrong (the drift test catches it after export).
+- **Revisit if:** workflow JSON gets unwieldy, or n8n adds a supported way to share code between nodes.
+
 ## D-013 · Rubric weights and thresholds for `csr` and `sdr`
 - **Date:** 2026-10-17 · **Phase:** 0 · **Status:** accepted
 - **Decided by:** learner (Claude recommended the brief's defaults)

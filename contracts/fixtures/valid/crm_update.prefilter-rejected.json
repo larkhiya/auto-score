@@ -1,0 +1,23 @@
+{
+  "contract": "crm_update",
+  "description": "Rejected by the gate, with reason code",
+  "data": {
+    "schema_version": "1.0.0",
+    "application_id": "app_000123",
+    "status": "PREFILTER_REJECTED",
+    "total_score": null,
+    "breakdown": null,
+    "summary": null,
+    "reason_codes": [
+      "NO_SHIFT_AVAILABILITY"
+    ],
+    "flags": [],
+    "job_id": "csr",
+    "job_profile_version": 1,
+    "prompt_version": null,
+    "model": null,
+    "execution_id": "1042",
+    "processed_at": "2026-10-17T09:30:09Z",
+    "idempotency_key": "app_000123:e8abdf98d1b5"
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://auto-score.local/contracts/prefilter_result.schema.json",
+  "title": "PrefilterResult",
+  "description": "Output of the deterministic gate. Three-valued (audit item 3): pass, fail (a clear miss), review (unknown: missing answers, unreadable CV, suspicious content).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "application_id",
+    "job_id",
+    "job_profile_version",
+    "outcome",
+    "reason_codes",
+    "flags",
+    "trace",
+    "evaluated_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "application_id": {
+      "$ref": "common.schema.json#/$defs/application_id"
+    },
+    "job_id": {
+      "$ref": "common.schema.json#/$defs/job_id"
+    },
+    "job_profile_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "outcome": {
+      "enum": [
+        "pass",
+        "fail",
+        "review"
+      ]
+    },
+    "reason_codes": {
+      "description": "Why it failed or needs review. Empty only when outcome = pass.",
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/code"
+      }
+    },
+    "flags": {
+      "description": "Signals found regardless of outcome, e.g. INJECTION_SUSPECTED.",
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/code"
+      }
+    },
+    "trace": {
+      "description": "Result of every node in the rule tree, for explainability.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "node",
+          "result"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "e.g. all[3].any[0]"
+          },
+          "node": {
+            "type": "string",
+            "description": "all | any | not | <check name>"
+          },
+          "result": {
+            "enum": [
+              true,
+              false,
+              "unknown"
+            ]
+          },
+          "reason": {
+            "$ref": "common.schema.json#/$defs/code"
+          }
+        }
+      }
+    },
+    "evaluated_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "enum": [
+              "fail",
+              "review"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "reason_codes": {
+            "type": "array",
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ]
+}

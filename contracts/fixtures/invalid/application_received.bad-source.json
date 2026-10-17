@@ -1,0 +1,40 @@
+{
+  "contract": "application_received",
+  "description": "source must be crm or email",
+  "expect": {
+    "path": "/source",
+    "keyword": "enum"
+  },
+  "data": {
+    "schema_version": "1.0.0",
+    "application_id": "app_000123",
+    "source": "fax",
+    "received_at": "2026-10-17T09:30:00Z",
+    "job_id": "csr",
+    "candidate": {
+      "name": "Jordan Rivera",
+      "email": "jordan.rivera@example.test",
+      "phone": null,
+      "location": null
+    },
+    "answers": {
+      "shift_availability": "yes",
+      "languages": [
+        "English",
+        "Spanish"
+      ]
+    },
+    "cv": {
+      "text": "Customer Support Specialist, Northwind Subscriptions (2023-2026)\n- Handled 60+ live chat and email tickets per day in Zendesk for a SaaS billing product.\n- Kept CSAT at 94% over 18 months and cut average handle time from 9 to 6 minutes.\n- De-escalated billing complaints and resolved tier-2 refund cases with finance.\n- Wrote 25 knowledge-base articles and macros used by the whole team.\nRetail Associate, Lakeside Electronics (2021-2023)\n- Helped 80+ customers a day choose devices; handled returns and complaints at the front desk.\nSkills: Zendesk, Salesforce Service Cloud, live chat, email support. Languages: English, Spanish.",
+      "filename": "cv_app_000123.txt",
+      "mime": "text/plain",
+      "sha256": "e8abdf98d1b51fa55c498f0639bf0fe32b6843a554ddaf270fc7d1770dbc029b",
+      "extraction_method": "provided_text",
+      "extraction_error": null,
+      "char_count": 631
+    },
+    "idempotency_key": "app_000123:e8abdf98d1b5",
+    "source_ref": "evt_000123",
+    "duplicate_of": null
+  }
+}

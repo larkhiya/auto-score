@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://auto-score.local/contracts/common.schema.json",
+  "title": "Shared definitions",
+  "description": "Building blocks reused by every contract. Timestamps use a regex instead of `format` so validators can be compiled to standalone code for n8n Code nodes.",
+  "$defs": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "timestamp": {
+      "description": "ISO 8601 in UTC, e.g. 2026-10-17T09:30:00Z or with milliseconds.",
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$"
+    },
+    "job_id": {
+      "description": "Short slug for a role, e.g. csr, sdr, admin.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{1,31}$"
+    },
+    "application_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "code": {
+      "description": "Machine-readable reason or flag code, e.g. NO_SHIFT_AVAILABILITY.",
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{1,63}$"
+    },
+    "criterion_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{1,47}$"
+    },
+    "candidate_status": {
+      "description": "Candidate state machine (brief §3.5, extended in Phase 2).",
+      "type": "string",
+      "enum": [
+        "NEW",
+        "SCREENING",
+        "PREFILTER_REJECTED",
+        "SHORTLISTED",
+        "MAYBE",
+        "NOT_A_FIT",
+        "NEEDS_REVIEW",
+        "ERROR"
+      ]
+    },
+    "evidence_quote": {
+      "description": "A verbatim excerpt from the CV. Code checks that it really appears there.",
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 400
+    }
+  }
+}

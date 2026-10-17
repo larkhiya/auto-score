@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://auto-score.local/contracts/job_profile.schema.json",
+  "title": "JobProfile",
+  "description": "Everything that makes one role different: pre-filter rules, rubric, nice-to-haves, thresholds. The engine is role-agnostic; it only reads this. Checks JSON Schema can't express (weights sum to 100, thresholds order, JD quotes) live in src/jobprofile.js.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "job_id", "version", "status", "title", "source_jd_text", "prefilter",
+    "criteria", "nice_to_haves", "thresholds", "bias_flags", "created_by", "approved_by", "approved_at", "created_at"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "job_id": { "$ref": "common.schema.json#/$defs/job_id" },
+    "version": { "type": "integer", "minimum": 1 },
+    "status": { "enum": ["draft", "approved", "archived"] },
+    "title": { "type": "string", "minLength": 2, "maxLength": 120 },
+    "source_jd_text": {
+      "description": "The job description the profile was drafted from; null for hand-written profiles.",
+      "type": ["string", "null"]
+    },
+    "prefilter": { "$ref": "#/$defs/rule" },
+    "criteria": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/criterion" }
+    },
+    "nice_to_haves": {
+      "description": "Recorded as flags on the ScoreCard; they never change the 0-100 total.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "description"],
+        "properties": {
+          "id": { "$ref": "common.schema.json#/$defs/criterion_id" },
+          "name": { "type": "string", "minLength": 2 },
+          "description": { "type": "string", "minLength": 2 },
+          "jd_quote": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shortlist", "maybe", "min_confidence"],
+      "properties": {
+        "shortlist": { "type": "number", "minimum": 0, "maximum": 100, "description": "total >= shortlist → SHORTLISTED" },
+        "maybe": { "type": "number", "minimum": 0, "maximum": 100, "description": "maybe <= total < shortlist → MAYBE; below → NOT_A_FIT" },
+        "min_confidence": { "type": "number", "minimum": 0, "maximum": 1, "description": "overall_confidence below this → NEEDS_REVIEW" }
+      }
+    },
+    "bias_flags": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "target", "phrase", "category", "message", "resolved"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "target": { "type": "string", "description": "Where the phrase was found: a criterion id, a rule path, or 'jd'." },
+          "phrase": { "type": "string", "minLength": 1 },
+          "category": { "enum": ["age", "gender", "ethnicity", "nationality", "religion", "marital_status", "disability", "appearance", "language_origin", "other"] },
+          "message": { "type": "string" },
+          "resolved": { "type": "boolean" },
+          "resolution_note": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "created_by": { "enum": ["human", "llm_draft"] },
+    "approved_by": { "type": ["string", "null"] },
+    "approved_at": { "anyOf": [{ "$ref": "common.schema.json#/$defs/timestamp" }, { "type": "null" }] },
+    "created_at": { "$ref": "common.schema.json#/$defs/timestamp" },
+    "builder": {
+      "description": "Set when created_by = llm_draft: which prompt and model drafted it, and any check errors left for the human.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prompt_version", "model"],
+      "properties": {
+        "prompt_version": { "type": "string" },
+        "model": { "type": "string" },
+        "check_errors": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "approved" } } },
+      "then": {
+        "properties": {
+          "approved_by": { "type": "string", "minLength": 1 },
+          "approved_at": { "$ref": "common.schema.json#/$defs/timestamp" }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "criterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "weight", "description", "anchors", "evidence_hints", "jd_quote"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/criterion_id" },
+        "name": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "weight": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "description": { "type": "string", "minLength": 5 },
+        "anchors": {
+          "description": "What each 0-4 score means for this criterion. All five are required.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["0", "1", "2", "3", "4"],
+          "properties": {
+            "0": { "type": "string", "minLength": 3 },
+            "1": { "type": "string", "minLength": 3 },
+            "2": { "type": "string", "minLength": 3 },
+            "3": { "type": "string", "minLength": 3 },
+            "4": { "type": "string", "minLength": 3 }
+          }
+        },
+        "evidence_hints": { "type": "array", "items": { "type": "string", "minLength": 2 } },
+        "jd_quote": { "type": ["string", "null"], "description": "The JD sentence this criterion comes from; null for hand-written profiles." }
+      }
+    },
+    "rule": {
+      "description": "Pre-filter rule tree: all / any / not groups with leaf checks from a fixed registry. Any node may carry a reason code reported when it fails.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["all"],
+          "properties": {
+            "all": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/rule" } },
+            "reason": { "$ref": "common.schema.json#/$defs/code" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["any"],
+          "properties": {
+            "any": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/rule" } },
+            "reason": { "$ref": "common.schema.json#/$defs/code" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["not"],
+          "properties": {
+            "not": { "$ref": "#/$defs/rule" },
+            "reason": { "$ref": "common.schema.json#/$defs/code" }
+          }
+        },
+        { "$ref": "#/$defs/leaf" }
+      ]
+    },
+    "leaf": {
+      "description": "One registry check. The enum below IS the registry; src/prefilter.js must implement exactly these (a test enforces it).",
+      "type": "object",
+      "required": ["check"],
+      "properties": {
+        "check": { "enum": ["cv_text_min_chars", "keyword", "field_present", "field_equals", "field_includes", "number_gte", "duplicate"] },
+        "reason": { "$ref": "common.schema.json#/$defs/code" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "check": { "const": "cv_text_min_chars" } } },
+          "then": {
+            "required": ["value"],
+            "properties": { "check": true, "reason": true, "value": { "type": "integer", "minimum": 0 } },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": { "properties": { "check": { "const": "keyword" } } },
+          "then": {
+            "required": ["terms"],
+            "properties": {
+              "check": true, "reason": true,
+              "terms": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 2 } },
+              "field": { "type": "string", "description": "Dot path; defaults to cv.text." }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": { "properties": { "check": { "const": "field_present" } } },
+          "then": {
+            "required": ["field"],
+            "properties": { "check": true, "reason": true, "field": { "type": "string", "minLength": 1 } },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": { "properties": { "check": { "enum": ["field_equals", "field_includes"] } } },
+          "then": {
+            "required": ["field", "value"],
+            "properties": {
+              "check": true, "reason": true,
+              "field": { "type": "string", "minLength": 1 },
+              "value": { "type": ["string", "number", "boolean"] }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": { "properties": { "check": { "const": "number_gte" } } },
+          "then": {
+            "required": ["field", "value"],
+            "properties": { "check": true, "reason": true, "field": { "type": "string", "minLength": 1 }, "value": { "type": "number" } },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": { "properties": { "check": { "const": "duplicate" } } },
+          "then": {
+            "properties": { "check": true, "reason": true },
+            "additionalProperties": false
+          }
+        }
+      ]
+    }
+  }
+}

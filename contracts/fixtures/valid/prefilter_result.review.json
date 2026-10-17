@@ -1,0 +1,29 @@
+{
+  "contract": "prefilter_result",
+  "description": "Unknown answer → review, with reason",
+  "data": {
+    "schema_version": "1.0.0",
+    "application_id": "app_000124",
+    "job_id": "csr",
+    "job_profile_version": 1,
+    "outcome": "review",
+    "reason_codes": [
+      "NO_SHIFT_AVAILABILITY"
+    ],
+    "flags": [],
+    "trace": [
+      {
+        "path": "all",
+        "node": "all",
+        "result": "unknown"
+      },
+      {
+        "path": "all[1]",
+        "node": "field_equals",
+        "result": "unknown",
+        "reason": "NO_SHIFT_AVAILABILITY"
+      }
+    ],
+    "evaluated_at": "2026-10-17T09:30:01.250Z"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://auto-score.local/contracts/run_log.schema.json",
+  "title": "RunLog",
+  "description": "One record per pipeline execution: what ran, how long each stage took, what it cost, how it ended. Records in = records out is checked against these.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "execution_id", "workflow", "application_id", "job_id", "started_at", "finished_at", "stage_timings_ms", "llm", "outcome", "error"],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "execution_id": { "type": "string", "minLength": 1 },
+    "workflow": { "type": "string", "minLength": 1 },
+    "application_id": { "anyOf": [{ "$ref": "common.schema.json#/$defs/application_id" }, { "type": "null" }] },
+    "job_id": { "anyOf": [{ "$ref": "common.schema.json#/$defs/job_id" }, { "type": "null" }] },
+    "started_at": { "$ref": "common.schema.json#/$defs/timestamp" },
+    "finished_at": { "$ref": "common.schema.json#/$defs/timestamp" },
+    "stage_timings_ms": {
+      "type": "object",
+      "additionalProperties": { "type": "number", "minimum": 0 }
+    },
+    "llm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["calls", "input_tokens", "output_tokens", "model", "cost_estimate_usd"],
+      "properties": {
+        "calls": { "type": "integer", "minimum": 0 },
+        "input_tokens": { "type": "integer", "minimum": 0 },
+        "output_tokens": { "type": "integer", "minimum": 0 },
+        "model": { "type": ["string", "null"] },
+        "cost_estimate_usd": { "type": "number", "minimum": 0 }
+      }
+    },
+    "outcome": {
+      "enum": ["SHORTLISTED", "MAYBE", "NOT_A_FIT", "NEEDS_REVIEW", "PREFILTER_REJECTED", "ERROR", "DUPLICATE_SKIPPED"]
+    },
+    "error": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["message", "node"],
+          "properties": {
+            "message": { "type": "string" },
+            "node": { "type": ["string", "null"] },
+            "type": { "type": ["string", "null"] }
+          }
+        },
+        { "type": "null" }
+      ]
+    }
+  }
+}

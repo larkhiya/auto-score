@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://auto-score.local/contracts/candidate_profile.schema.json",
+  "title": "CandidateProfile",
+  "description": "LLM call 1: facts extracted from the (redacted) CV. Role-agnostic, no personal data, and every item carries a verbatim evidence quote that code checks against the CV.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "experience", "skills", "tools", "achievements", "languages", "total_experience_months"],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "experience": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "organization", "duration_months", "summary", "evidence_quote"],
+        "properties": {
+          "title": { "type": "string", "minLength": 1 },
+          "organization": { "type": ["string", "null"] },
+          "duration_months": { "type": ["number", "null"], "minimum": 0 },
+          "summary": { "type": "string" },
+          "evidence_quote": { "$ref": "common.schema.json#/$defs/evidence_quote" }
+        }
+      }
+    },
+    "skills": { "$ref": "#/$defs/named_items" },
+    "tools": { "$ref": "#/$defs/named_items" },
+    "achievements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description", "metric", "evidence_quote"],
+        "properties": {
+          "description": { "type": "string", "minLength": 1 },
+          "metric": { "type": ["string", "null"], "description": "The number, if any, e.g. '94% CSAT' or '120% of quota'." },
+          "evidence_quote": { "$ref": "common.schema.json#/$defs/evidence_quote" }
+        }
+      }
+    },
+    "languages": { "$ref": "#/$defs/named_items" },
+    "total_experience_months": { "type": ["number", "null"], "minimum": 0 }
+  },
+  "$defs": {
+    "named_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "evidence_quote"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "evidence_quote": { "$ref": "common.schema.json#/$defs/evidence_quote" }
+        }
+      }
+    }
+  }
+}

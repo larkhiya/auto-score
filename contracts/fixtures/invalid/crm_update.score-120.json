@@ -1,0 +1,38 @@
+{
+  "contract": "crm_update",
+  "description": "total score is 0-100",
+  "expect": {
+    "path": "/total_score",
+    "keyword": "maximum"
+  },
+  "data": {
+    "schema_version": "1.0.0",
+    "application_id": "app_000123",
+    "status": "MAYBE",
+    "total_score": 120,
+    "breakdown": [
+      {
+        "criterion_id": "customer_facing_experience",
+        "name": "Customer-facing experience",
+        "weight": 25,
+        "score": 3,
+        "points": 18.75,
+        "evidence_quote": "Handled 60+ live chat and email tickets per day in Zendesk",
+        "evidence_verified": true,
+        "rationale": "Sustained chat and email support with stated daily volume."
+      }
+    ],
+    "summary": "Experienced chat and email support agent.",
+    "reason_codes": [],
+    "flags": [
+      "NICE_TO_HAVE_SECOND_LANGUAGE"
+    ],
+    "job_id": "csr",
+    "job_profile_version": 1,
+    "prompt_version": "screening_v1",
+    "model": "example-model",
+    "execution_id": "1042",
+    "processed_at": "2026-10-17T09:30:09Z",
+    "idempotency_key": "app_000123:e8abdf98d1b5"
+  }
+}

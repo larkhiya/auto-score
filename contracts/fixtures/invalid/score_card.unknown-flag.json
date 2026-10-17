@@ -1,0 +1,62 @@
+{
+  "contract": "score_card",
+  "description": "flags come from a fixed list",
+  "expect": {
+    "path": "/flags/0",
+    "keyword": "enum"
+  },
+  "data": {
+    "schema_version": "1.0.0",
+    "job_id": "csr",
+    "job_profile_version": 1,
+    "criteria": [
+      {
+        "criterion_id": "customer_facing_experience",
+        "score": 3,
+        "evidence_quote": "Handled 60+ live chat and email tickets per day in Zendesk",
+        "rationale": "Sustained chat and email support with stated daily volume."
+      },
+      {
+        "criterion_id": "problem_solving_deescalation",
+        "score": 3,
+        "evidence_quote": "Handled 60+ live chat and email tickets per day in Zendesk",
+        "rationale": "Sustained chat and email support with stated daily volume."
+      },
+      {
+        "criterion_id": "written_communication",
+        "score": 3,
+        "evidence_quote": "Handled 60+ live chat and email tickets per day in Zendesk",
+        "rationale": "Sustained chat and email support with stated daily volume."
+      },
+      {
+        "criterion_id": "results_evidence",
+        "score": 3,
+        "evidence_quote": "Handled 60+ live chat and email tickets per day in Zendesk",
+        "rationale": "Sustained chat and email support with stated daily volume."
+      },
+      {
+        "criterion_id": "support_tools",
+        "score": 3,
+        "evidence_quote": "Handled 60+ live chat and email tickets per day in Zendesk",
+        "rationale": "Sustained chat and email support with stated daily volume."
+      },
+      {
+        "criterion_id": "product_industry_familiarity",
+        "score": 0,
+        "evidence_quote": null,
+        "rationale": "The CV gives no evidence for this criterion."
+      }
+    ],
+    "nice_to_haves_found": [
+      {
+        "id": "second_language",
+        "evidence_quote": "Languages: English, Spanish"
+      }
+    ],
+    "overall_confidence": 0.85,
+    "flags": [
+      "HIRE_ME"
+    ],
+    "summary": "Experienced chat and email support agent with strong satisfaction metrics."
+  }
+}

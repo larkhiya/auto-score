@@ -1,0 +1,25 @@
+{
+  "contract": "crm_update",
+  "description": "NEEDS_REVIEW must say why",
+  "expect": {
+    "path": "/reason_codes",
+    "keyword": "minItems"
+  },
+  "data": {
+    "schema_version": "1.0.0",
+    "application_id": "app_000123",
+    "status": "NEEDS_REVIEW",
+    "total_score": null,
+    "breakdown": null,
+    "summary": null,
+    "reason_codes": [],
+    "flags": [],
+    "job_id": "csr",
+    "job_profile_version": 1,
+    "prompt_version": null,
+    "model": null,
+    "execution_id": "1042",
+    "processed_at": "2026-10-17T09:30:09Z",
+    "idempotency_key": "app_000123:e8abdf98d1b5"
+  }
+}

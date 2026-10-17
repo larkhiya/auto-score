@@ -11,6 +11,17 @@
         ]
       ]
     },
+    "Keep experienced (2+ years)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Map to CrmUpdate fields (C-04)",
+            "type": "main"
+          }
+        ]
+      ]
+    },
     "Make 3 applicants": {
       "main": [
         [
@@ -106,6 +117,53 @@
       ],
       "type": "n8n-nodes-base.code",
       "typeVersion": 2
+    },
+    {
+      "id": "4b5c6d7e-8f90-4a1b-9c2d-3e4f5a6b7c08",
+      "name": "Map to CrmUpdate fields (C-04)",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1b2c3d4-0001-4e5f-8a9b-0c1d2e3f4a01",
+              "name": "application_id",
+              "type": "string",
+              "value": "={{ $json.candidate_id }}"
+            },
+            {
+              "id": "a1b2c3d4-0002-4e5f-8a9b-0c1d2e3f4a02",
+              "name": "status",
+              "type": "string",
+              "value": "SCREENING"
+            },
+            {
+              "id": "a1b2c3d4-0003-4e5f-8a9b-0c1d2e3f4a03",
+              "name": "reason_codes",
+              "type": "array",
+              "value": "={{ [] }}"
+            },
+            {
+              "id": "a1b2c3d4-0004-4e5f-8a9b-0c1d2e3f4a04",
+              "name": "execution_id",
+              "type": "string",
+              "value": "={{ $execution.id }}"
+            },
+            {
+              "id": "a1b2c3d4-0005-4e5f-8a9b-0c1d2e3f4a05",
+              "name": "processed_at",
+              "type": "string",
+              "value": "={{ $now.toUTC().toISO() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "position": [
+        1100,
+        300
+      ],
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5
     },
     {
       "id": "1d2c3b4a-5f6e-4d7c-8b9a-0f1e2d3c4b96",
