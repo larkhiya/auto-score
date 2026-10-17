@@ -1,12 +1,10 @@
 # Progress
-**Current phase:** 2 → 4 (Phase 3 waits on the n8n API key) · **Target finish:** straight-through build (D-008) · **Pace:** continuous; lessons deferred to a review pass
+**Current phase:** 3 (Phases 4 and 5 have their pure code done) · **Target finish:** straight-through build (D-008) · **Pace:** continuous; lessons deferred to a review pass
 
 ## Now / Next / Blocked
-- **Now:** Phase 4 pre-filter as pure, tested code (needs no n8n)
-- **Next:** Phase 3 intake workflows (WF-01, WF-02), then wiring Phase 4 into WF-10
-- **Blocked:** nothing (both keys in .env; CRM resets approved, D-022)
-  - `N8N_API_KEY` (learner creates it in the n8n editor) blocks importing and running workflows (Phase 0 hello run, Phase 1 mapping demo, Phase 3+).
-  - Reseeding the CRM with the regenerated dataset needs approval to reset (delete) the 222 synthetic candidates seeded earlier (`scripts/reset-crm.js --yes`).
+- **Now:** reseed the CRM with the corrected dataset (D-022), then Phase 3 intake workflows (WF-01, WF-02, WF-10 stub)
+- **Next:** wire the Phase 4 pre-filter into WF-10; Phase 5 LLM calls
+- **Blocked:** nothing (both keys in `.env`; CRM resets approved, D-022)
 
 ## Phases
 | # | Phase | Status | Planned | Done | Tag |
