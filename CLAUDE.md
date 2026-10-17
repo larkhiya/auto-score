@@ -109,3 +109,4 @@ Run it, show the evidence (test output, execution ID, CRM state) and update the 
 - (L-003) Never put file content in a double-quoted shell string (`node -e "..."`, `sed "..."`): bash runs backticks and expands `$`. Use Edit/Write, or a quoted heredoc `<<'EOF'`.
 - (L-004) Capture what a call actually sends (echo server or execution data) before theorising; never set n8n switch parameters (`sendBody`, `sendHeaders`, `authentication`, `resource`, `operation`) with expressions.
 - (L-005) Calibrate synthetic personas against the rubric anchors by hand (expected 0–4 per criterion and total) before trusting them as ground truth.
+- (L-007) After `npm run build`, import ALL workflows (a src module can be bundled into several) and run `npm run n8n:drift`.

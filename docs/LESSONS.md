@@ -14,6 +14,15 @@ Template:
 
 ---
 
+## L-007 · Live workflows lagged behind git after a shared src change
+- **Date:** 2026-10-17 · **Phase:** 5 · **Who:** Claude
+- **What happened:** after changing `src/text.js` I ran `npm run build` (which rebuilt the bundles in every workflow file) but imported only WF-10 and WF-12. WF-01 and WF-03 in n8n kept the old bundle.
+- **Symptom:** a byte-for-byte comparison of n8n's export against `workflows/` showed DIFF for 01 and 03. I found it while checking an unrelated file-lock error during export.
+- **Root cause:** a src module can be bundled into several workflows, so "the workflows I edited" isn't the same as "the workflows that changed". The drift test only compares repo files against src, not n8n against the repo.
+- **Fix:** imported all workflows; all 7 now match. Added `npm run n8n:drift` (export n8n → compare with git, exit 1 on any difference).
+- **Prevention rule:** after `npm run build`, import ALL workflows and run `npm run n8n:drift`. → promoted to Learned Rules: yes
+- **Concept it illustrates:** C-28 (observability: know what is actually deployed)
+
 ## L-006 · The evidence check rejected real quotes because of list markers
 - **Date:** 2026-10-17 · **Phase:** 5 · **Who:** Claude
 - **What happened:** in the v1 20-per-role run, the name-swap pair went to NEEDS_REVIEW (EVIDENCE_NOT_VERIFIED). One of the two "unverified" quotes was genuine: the model quoted two adjacent bullets as one passage and left out the `- ` marker between them.

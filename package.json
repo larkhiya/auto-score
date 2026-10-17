@@ -17,7 +17,8 @@
     "build": "node scripts/build-validators.js && node scripts/build-prompts.js && node scripts/build-workflows.js",
     "build:check": "node scripts/build-validators.js --check && node scripts/build-prompts.js --check && node scripts/build-workflows.js --check",
     "fixtures": "node scripts/make-fixtures.js",
-    "crm": "node --disable-warning=ExperimentalWarning crm/server.js"
+    "crm": "node --disable-warning=ExperimentalWarning crm/server.js",
+    "n8n:drift": "node scripts/n8n-drift.js"
   },
   "dependencies": {
     "ajv": "^8.20.0",
