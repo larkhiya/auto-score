@@ -1,0 +1,315 @@
+{
+  "at": "2026-10-17T16:47:53.470Z",
+  "summary": {
+    "cvs": 20,
+    "moved": 20,
+    "tie": 0,
+    "wrong_way": 0,
+    "unscored": 0,
+    "still_open": 0,
+    "min_gap": 1.25,
+    "mean_gap": 40.38
+  },
+  "results": [
+    {
+      "ref": "rs-01",
+      "profile": "support_heavy",
+      "expected_direction": "csr>sdr",
+      "csr": {
+        "status": "SHORTLISTED",
+        "score": 90
+      },
+      "sdr": {
+        "status": "NOT_A_FIT",
+        "score": 26.25
+      },
+      "gap": 63.75,
+      "verdict": "moved"
+    },
+    {
+      "ref": "rs-02",
+      "profile": "support_heavy",
+      "expected_direction": "csr>sdr",
+      "csr": {
+        "status": "SHORTLISTED",
+        "score": 77.5
+      },
+      "sdr": {
+        "status": "NOT_A_FIT",
+        "score": 20
+      },
+      "gap": 57.5,
+      "verdict": "moved"
+    },
+    {
+      "ref": "rs-03",
+      "profile": "support_heavy",
+      "expected_direction": "csr>sdr",
+      "csr": {
+        "status": "SHORTLISTED",
+        "score": 81.25
+      },
+      "sdr": {
+        "status": "NOT_A_FIT",
+        "score": 37.5
+      },
+      "gap": 43.75,
+      "verdict": "moved"
+    },
+    {
+      "ref": "rs-04",
+      "profile": "support_heavy",
+      "expected_direction": "csr>sdr",
+      "csr": {
+        "status": "SHORTLISTED",
+        "score": 86.25
+      },
+      "sdr": {
+        "status": "NOT_A_FIT",
+        "score": 17.5
+      },
+      "gap": 68.75,
+      "verdict": "moved"
+    },
+    {
+      "ref": "rs-05",
+      "profile": "support_heavy",
+      "expected_direction": "csr>sdr",
+      "csr": {
+        "status": "SHORTLISTED",
+        "score": 90
+      },
+      "sdr": {
+        "status": "NOT_A_FIT",
+        "score": 20
+      },
+      "gap": 70,
+      "verdict": "moved"
+    },
+    {
+      "ref": "rs-06",
+      "profile": "support_heavy",
+      "expected_direction": "csr>sdr",
+      "csr": {
+        "status": "SHORTLISTED",
+        "score": 93.75
+      },
+      "sdr": {
+        "status": "NOT_A_FIT",
+        "score": 20
+      },
+      "gap": 73.75,
+      "verdict": "moved"
+    },
+    {
+      "ref": "rs-07",
+      "profile": "support_heavy",
+      "expected_direction": "csr>sdr",
+      "csr": {
+        "status": "SHORTLISTED",
+        "score": 90
+      },
+      "sdr": {
+        "status": "NOT_A_FIT",
+        "score": 20
+      },
+      "gap": 70,
+      "verdict": "moved"
+    },
+    {
+      "ref": "rs-08",
+      "profile": "support_heavy",
+      "expected_direction": "csr>sdr",
+      "csr": {
+        "status": "SHORTLISTED",
+        "score": 90
+      },
+      "sdr": {
+        "status": "NOT_A_FIT",
+        "score": 20
+      },
+      "gap": 70,
+      "verdict": "moved"
+    },
+    {
+      "ref": "rs-09",
+      "profile": "support_heavy",
+      "expected_direction": "csr>sdr",
+      "csr": {
+        "status": "SHORTLISTED",
+        "score": 81.25
+      },
+      "sdr": {
+        "status": "NOT_A_FIT",
+        "score": 22.5
+      },
+      "gap": 58.75,
+      "verdict": "moved"
+    },
+    {
+      "ref": "rs-10",
+      "profile": "support_heavy",
+      "expected_direction": "csr>sdr",
+      "csr": {
+        "status": "SHORTLISTED",
+        "score": 90
+      },
+      "sdr": {
+        "status": "NOT_A_FIT",
+        "score": 20
+      },
+      "gap": 70,
+      "verdict": "moved"
+    },
+    {
+      "ref": "rs-11",
+      "profile": "prospecting_heavy",
+      "expected_direction": "sdr>csr",
+      "csr": {
+        "status": "MAYBE",
+        "score": 71.25
+      },
+      "sdr": {
+        "status": "SHORTLISTED",
+        "score": 86.25
+      },
+      "gap": 15,
+      "verdict": "moved"
+    },
+    {
+      "ref": "rs-12",
+      "profile": "prospecting_heavy",
+      "expected_direction": "sdr>csr",
+      "csr": {
+        "status": "SHORTLISTED",
+        "score": 75
+      },
+      "sdr": {
+        "status": "SHORTLISTED",
+        "score": 76.25
+      },
+      "gap": 1.25,
+      "verdict": "moved"
+    },
+    {
+      "ref": "rs-13",
+      "profile": "prospecting_heavy",
+      "expected_direction": "sdr>csr",
+      "csr": {
+        "status": "SHORTLISTED",
+        "score": 78.75
+      },
+      "sdr": {
+        "status": "SHORTLISTED",
+        "score": 96.25
+      },
+      "gap": 17.5,
+      "verdict": "moved"
+    },
+    {
+      "ref": "rs-14",
+      "profile": "prospecting_heavy",
+      "expected_direction": "sdr>csr",
+      "csr": {
+        "status": "SHORTLISTED",
+        "score": 78.75
+      },
+      "sdr": {
+        "status": "SHORTLISTED",
+        "score": 82.5
+      },
+      "gap": 3.75,
+      "verdict": "moved"
+    },
+    {
+      "ref": "rs-15",
+      "profile": "prospecting_heavy",
+      "expected_direction": "sdr>csr",
+      "csr": {
+        "status": "SHORTLISTED",
+        "score": 78.75
+      },
+      "sdr": {
+        "status": "SHORTLISTED",
+        "score": 86.25
+      },
+      "gap": 7.5,
+      "verdict": "moved"
+    },
+    {
+      "ref": "rs-16",
+      "profile": "prospecting_heavy",
+      "expected_direction": "sdr>csr",
+      "csr": {
+        "status": "MAYBE",
+        "score": 66.25
+      },
+      "sdr": {
+        "status": "SHORTLISTED",
+        "score": 86.25
+      },
+      "gap": 20,
+      "verdict": "moved"
+    },
+    {
+      "ref": "rs-17",
+      "profile": "prospecting_heavy",
+      "expected_direction": "sdr>csr",
+      "csr": {
+        "status": "NOT_A_FIT",
+        "score": 43.75
+      },
+      "sdr": {
+        "status": "SHORTLISTED",
+        "score": 90
+      },
+      "gap": 46.25,
+      "verdict": "moved"
+    },
+    {
+      "ref": "rs-18",
+      "profile": "prospecting_heavy",
+      "expected_direction": "sdr>csr",
+      "csr": {
+        "status": "MAYBE",
+        "score": 71.25
+      },
+      "sdr": {
+        "status": "SHORTLISTED",
+        "score": 82.5
+      },
+      "gap": 11.25,
+      "verdict": "moved"
+    },
+    {
+      "ref": "rs-19",
+      "profile": "prospecting_heavy",
+      "expected_direction": "sdr>csr",
+      "csr": {
+        "status": "MAYBE",
+        "score": 65
+      },
+      "sdr": {
+        "status": "SHORTLISTED",
+        "score": 82.5
+      },
+      "gap": 17.5,
+      "verdict": "moved"
+    },
+    {
+      "ref": "rs-20",
+      "profile": "prospecting_heavy",
+      "expected_direction": "sdr>csr",
+      "csr": {
+        "status": "MAYBE",
+        "score": 61.25
+      },
+      "sdr": {
+        "status": "SHORTLISTED",
+        "score": 82.5
+      },
+      "gap": 21.25,
+      "verdict": "moved"
+    }
+  ]
+}

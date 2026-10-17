@@ -1,10 +1,10 @@
 # Progress
-**Current phase:** 7 — Add any role from a job description · **Target finish:** straight-through build (D-008) · **Pace:** continuous; learner now doing retrieval questions at session start
+**Current phase:** 8 — Prove it works every time · **Target finish:** straight-through build (D-008) · **Pace:** continuous; learner now doing retrieval questions at session start
 
 ## Now / Next / Blocked
-- **Now:** Phase 7: everything done except the role-switch set (about 80 LLM calls, waiting for the learner's go-ahead)
-- **Next:** Phase 8 full eval incl. v1 vs v2 on identical data
-- **Blocked:** role-switch run needs the learner's OK (CLAUDE.md: more than 20 LLM calls)
+- **Now:** Phase 7 done (✅*); Phase 8 next
+- **Next:** Phase 8 full eval incl. v1 vs v2 on identical data (reseed first; ask before the large run)
+- **Blocked:** nothing
 - **Notes:** CRM resets under D-022 on 2026-10-17 (dedupe proof; dataset recalibrations L-005). The dataset was regenerated after the v2 run (long-CV dates), so reseed before Phase 8. The n8n Gemini credential is named "Google Gemini(PaLM) Api account".
 
 ## Phases
@@ -17,7 +17,7 @@
 | 4 | Boolean pre-filter | ✅* | 2026-10-17 | 2026-10-17 | phase-4 |
 | 5 | AI screening and scoring | ✅* | 2026-10-17 | 2026-10-17 | phase-5 |
 | 6 | CRM write-back and error handling | ✅* | 2026-10-17 | 2026-10-17 | phase-6 |
-| 7 | Add any role from a job description | 🟨 | straight-through | | |
+| 7 | Add any role from a job description | ✅* | 2026-10-18 | 2026-10-18 | phase-7 |
 | 8 | Prove it works every time | ⬜ | straight-through | | |
 | 9 | Package for portfolio and interviews | ⬜ | straight-through | | |
 
@@ -89,26 +89,28 @@ Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items m
 - [x] Every score records its `job_profile_version` (31/31 Admin records: v1)
 - [x] JOB_NOT_APPROVED: an application to the unapproved `carebias` job → NEEDS_REVIEW `JOB_NOT_APPROVED`, 0 LLM calls (app_000254)
 - [x] No code changes for the new role: the Admin work touches only `data/`, `scripts/`, `tests/prefilter.test.js` and `config/jobs/admin.v1.json`. `git diff --stat HEAD -- src prompts/screening_v1.md prompts/screening_v2.md workflows contracts crm` is empty. Since `phase-6`, the screening workflows changed only through re-bundled shared modules from part 1 (the builder prompt added to the prompt registry; the JobProfile 1.1.0 validator). Screening logic and screening prompts are unchanged. n8n matches git
-- [ ] Role-switch set: at least 18/20 CVs move in the expected direction (about 80 LLM calls; ask first)
+- [x] Role-switch set: **20/20 CVs move in the expected direction** (target ≥ 18), 40 records all scored, 80 LLM calls, learner approved the run (`reports/role-switch-2026-10-17.json`, `scripts/role-switch-report.js`)
 - [ ] Optional bulk re-score when a new version is approved (not built; optional in the brief)
 - [ ] C-33 at can-explain (deferred, ⏭)
 - Finding (D-030): the approved keyword list has no "Executive Assistant", "Personal Assistant" or "Secretary", so a strong PA is rejected (`admin-022`). The draft also turned two JD requirements into weighted criteria rather than must-haves: Office/Excel became `office_software_proficiency` (weight 25), and "clear written and spoken English" has no check at all. Both are the reviewer's call; the fix is a v2.
+- Finding (role switch): the gaps are lopsided. Support CVs lose 44–74 points as SDRs (all 10 NOT_A_FIT). Prospecting CVs lose only 1.25–46 points as CSRs, 4 of 10 are still SHORTLISTED as CSRs, and `rs-12` held its direction by 1.25 points. Cause: the csr criteria are generic enough that sales evidence counts. Across the 10 prospecting CVs scored for csr, any quota number earns `results_evidence` 3.8/4 on average, HubSpot call-logging earns `support_tools` 3/4, cold calls count as customer-facing (2.8) and objection handling counts as de-escalation (2.6). The sdr rubric is specific, so it doesn't happen the other way. Same root as the Phase 5 cross-applicant misses (D-027). Fix = a csr v2 with support-specific anchors (learner's decision).
 - Caveat: Admin scores are flat (every strong 100, every medium 65) because the personas are templates. That shows the anchors are applied consistently, not that scoring is accurate on varied CVs. Phase 8 should add varied CVs.
 
 ## Learner review pass (D-008), collected as we go
 - Concepts deferred: see LEARNING (`⏭`)
 - Decisions to confirm: D-014 to D-021, D-023 to D-025, D-028 to D-030 (`pending learner review`)
-- Profile review: the Admin v1 gaps above (missing PA titles, English, Office as a criterion rather than a must-have). Decide whether to make a v2
+- Profile review: the Admin v1 gaps above (missing PA titles, English, Office as a criterion rather than a must-have), and the csr anchors that credit sales evidence (role-switch finding). Decide whether to make v2s
 - Exercises: hello-items item-count prediction (Phase 0); find a loose field in the ScoreCard schema (Phase 1); spot-check 10 answer-key rows (Phase 2)
 
 ## Session log (newest first)
 ### S-02 (continued) · 2026-10-18 · Phase 7 (part 2)
 - Done: confirmed the learner's Admin approval in the CRM database; `scripts/export-profile.js`; Admin personas (`scripts/lib/personas-admin.js`, calibrated to the approved anchors, L-005); generator extended on its own random stream; answer-key test covers admin; seeded and screened 31 Admin applicants; JOB_NOT_APPROVED check; no-code-change diff
 - Verified (evidence): see the Phase 7 checklist; 158 unit tests; n8n matches git
-- Not yet verified: the role-switch set; varied (non-template) Admin CVs
+- Role-switch run (learner approved, 80 calls): 20/20 moved in the expected direction; lopsided gaps traced to the csr anchors (finding above)
+- Not yet verified: varied (non-template) Admin CVs; csr behaviour on real sales-to-support career changers
 - Decisions: D-029, D-030 · Lessons: L-011
-- LLM calls this part: 38 (free tier, $0)
-- Next: role-switch run (needs the go-ahead), then tag `phase-7` and Phase 8
+- LLM calls this part: 118 (38 Admin + 80 role switch; free tier, $0)
+- Next: Phase 8
 
 ### S-02 (continued) · 2026-10-17 · Phase 6
 - Done: `src/deadletter.js` (+ tests), `dead_letters` Data Table, WF-91, WF-90, caller dead-lettering in WF-01/WF-03/WF-02, replay events, `scripts/replay-dlq.js`, `scripts/chaos-run.js`, `n8n:drift`
