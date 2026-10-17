@@ -35,10 +35,11 @@ function backoffMs(attempt, { headers, baseMs = DEFAULTS.baseMs, maxMs = DEFAULT
 }
 
 // One decision object for the workflow: what to do next after attempt N.
-function nextStep({ statusCode, error, headers, attempt, maxAttempts = DEFAULTS.maxAttempts, random }) {
+// maxMs: LLM calls pass a higher cap so a provider's "retry in 40s" can be honoured.
+function nextStep({ statusCode, error, headers, attempt, maxAttempts = DEFAULTS.maxAttempts, maxMs, random }) {
   const c = classify({ statusCode, error });
   if (c.decision === 'retry' && attempt >= maxAttempts) return { ...c, decision: 'give_up', reason: c.reason, delayMs: 0 };
-  return { ...c, delayMs: c.decision === 'retry' ? backoffMs(attempt, { headers, random }) : 0 };
+  return { ...c, delayMs: c.decision === 'retry' ? backoffMs(attempt, { headers, random, ...(maxMs ? { maxMs } : {}) }) : 0 };
 }
 
 module.exports = { classify, backoffMs, retryAfterMs, nextStep, DEFAULTS };

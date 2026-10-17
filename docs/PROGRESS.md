@@ -2,8 +2,9 @@
 **Current phase:** 3 (Phases 4 and 5 have their pure code done) · **Target finish:** straight-through build (D-008) · **Pace:** continuous; lessons deferred to a review pass
 
 ## Now / Next / Blocked
-- **Now:** WF-10 full pipeline: load the approved profile → pre-filter → (Phase 5) redact → LLM extract → LLM score → evidence → scoring → write-back
-- **Next:** the learner creates the n8n Gemini credential; then the 5-per-role smoke run
+- **Now:** full WF-10 (profile → pre-filter → redact → extract → score → evidence → status → write-back → RunLog) and WF-12 (Gemini call + contract check + one repair) are WRITTEN and unit-tested, NOT yet imported or run in n8n
+- **Next:** (1) learner creates the n8n credential "Gemini API" (type Google Gemini(PaLM) Api); (2) `npm run n8n:import`; (3) 5-per-role smoke run; (4) D-025 record (HTTP to Gemini for screening, AI nodes for WF-05); Phases 6–9
+- **Blocked:** n8n Gemini credential (learner)
 - **Note:** CRM reset under D-022 at 2026-10-17 (dedupe proof); 222 reseeded
 - **Blocked:** nothing (both keys in `.env`; CRM resets approved, D-022)
 
