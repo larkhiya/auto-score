@@ -14,7 +14,7 @@ Under D-008 (straight-through build), each phase's concepts are marked ⏭ when 
 | C-07 | APIs, auth and webhooks from the integrator's side | 2 | a building badge; "call me back when it's ready" | ⏭ | |
 | C-08 | Test data and ground truth | 2 | the teacher's answer key, written before grading | ⏭ | |
 | C-09 | Normalization / the adapter pattern | 3 | a travel adapter: many plugs, one socket | ⏭ | |
-| C-10 | Idempotency and deduplication | 3 | an elevator button | ⏭ | |
+| C-10 | Idempotency and deduplication | 3 | an elevator button | 🟨 | "Check-then-write fails because two processes can both check before the first has finished; instead we do both in a single step." (labelled that step "the idempotency key"; it's compare-and-set, see misconceptions) |
 | C-11 | Binary data and text extraction | 3 | a photocopy of a letter vs the typed letter | ⏭ | |
 | C-12 | Boolean logic and gating | 4 | the bouncer before the interview panel; `&&` short-circuit | ⬜ | |
 | C-13 | Deterministic vs probabilistic steps | 4 | a calculator vs a talented intern | ⬜ | |
@@ -67,7 +67,12 @@ Under D-008 (straight-through build), each phase's concepts are marked ⏭ when 
   - C-03: in `docs/ARCHITECTURE.md`, WF-01 is a webhook (the CRM pushes) and WF-02 is IMAP polling (n8n pulls).
 
 ## Misconceptions to revisit
-(none yet)
+- **2026-10-18 · C-10 · "Idempotency locks the data so the second email waits until the first is done."** Two ideas are mixed up here.
+  - Idempotency means doing something twice leaves the world the same as doing it once; it isn't a lock.
+  - What stopped the duplicate was a compare-and-set write (`X-Expected-Status: NEW`). The second run wasn't made to wait: it was refused (409) and skipped.
+  - The right part: the learner saw the race and that only one run may win. Hint given.
+  - Second attempt: "the CRM refuses and skips a record that isn't NEW". The refusal part is now right, but the learner still pictures "read first, then refuse" as two steps and didn't explain why a separate read-then-write fails. Explained: check-then-act race vs atomic compare-and-set, and that Idempotency-Key covers the same run retrying while CAS covers two different runs. Still 🟦 until the learner explains it back.
+  - Third attempt: the race and the fix (check and write in one step) are both right. Remaining gap: the learner called that single step "the idempotency key". It's compare-and-set; the idempotency key makes a *retried* request safe. → 🟨 practiced. Revisit: "which header stops two different runs, and which stops one run's retry?"
 
 ## Learner's open questions
 (none yet)

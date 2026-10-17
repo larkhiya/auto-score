@@ -6,7 +6,6 @@
 - **Next:** (1) learner creates the n8n credential "Gemini API" (type Google Gemini(PaLM) Api); (2) `npm run n8n:import`; (3) 5-per-role smoke run; (4) D-025 record (HTTP to Gemini for screening, AI nodes for WF-05); Phases 6–9
 - **Blocked:** n8n Gemini credential (learner)
 - **Note:** CRM reset under D-022 at 2026-10-17 (dedupe proof); 222 reseeded
-- **Blocked:** nothing (both keys in `.env`; CRM resets approved, D-022)
 
 ## Phases
 | # | Phase | Status | Planned | Done | Tag |

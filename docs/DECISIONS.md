@@ -12,6 +12,17 @@ Under D-008, Claude makes design choices during the straight-through build and m
 
 ---
 
+## D-025 · Screening calls Gemini over HTTP in one sub-workflow (WF-12); n8n AI nodes for the profile builder
+- **Date:** 2026-10-18 · **Phase:** 5 · **Status:** pending learner review
+- **Decided by:** Claude (D-008; brief §5.2 default was "AI nodes first, HTTP as fallback")
+- **Options:**
+  - A: n8n LLM Chain + Gemini Chat Model + Structured Output Parser (+ shows the AI nodes; − the parser adds format instructions instead of using Gemini's native schema-constrained output, token usage is harder to get, and retry behaviour is n8n's)
+  - B: HTTP Request to `generateContent` inside WF-12 (+ native `responseSchema` with criterion ids pinned as an enum, exact token counts for RunLog, the same backoff policy as WF-11, one place to swap provider; − more nodes to own)
+- **Decision:** B for screening (high volume; correctness and logging matter most). The low-volume job-profile builder (WF-05, Phase 7) will use the n8n AI nodes, so the portfolio shows both, each with a reason.
+- **Model:** `gemini-3.5-flash-lite`, temperature 0, no thinking budget (not supported for this model: probe returned 400). The credential is the learner's "Google Gemini(PaLM) Api account" (key sent as a query parameter by n8n's standard credential).
+- **Evidence:** first smoke runs averaged 2 calls per screened record, about 2.5–3.6k input / 0.8–1.9k output tokens, 7–10 s per record; pre-filter-rejected and review records used 0 calls.
+- **Revisit if:** structured-output reliability drops (watch the repair rate), or the provider changes (D-007).
+
 ## D-024 · One CRM-call sub-workflow (WF-11) owns the retry policy
 - **Date:** 2026-10-17 · **Phase:** 3 · **Status:** pending learner review
 - **Decided by:** Claude (D-008)

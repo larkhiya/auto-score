@@ -70,26 +70,34 @@ function csrStrongJob(r, years) {
   return { title: r.pick(['Customer Support Specialist', 'Senior Customer Service Representative', 'Tier 2 Support Agent', 'Customer Care Team Lead', 'Contact Centre Agent']), org: r.pick(SUPPORT_ORGS), years, bullets };
 }
 
-// Each medium-tier setting has its own employers and duties, so the CV reads coherently.
+// MEDIUM tier, calibrated against the csr anchors (L-005). The target is a total of about 55-70
+// (MAYBE), so every medium CV carries moderate evidence on most criteria:
+//   customer-facing 3 (sustained, channels named, NO daily volume: volume earns anchor 4)
+//   problem solving 2 (handles complaints, no stated outcome) · written 2-3 (email or chat)
+//   results 2 (a metric named WITHOUT a number: a number earns anchor 3) · tools 3 (one tool, how used)
+//   product 1-2. Weighted: about 18.75 + 10 + 9.4 + 7.5 + 11.25 + 3.75 ≈ 61.
+// Each setting has its own employers and duties, so the CV reads coherently.
 const CSR_MEDIUM_SETTINGS = [
-  { titles: ['Customer Service Representative', 'Call Centre Agent'], orgs: SUPPORT_ORGS, bullets: [
-    'Answered customer calls and emails about orders, deliveries and returns.',
-    'Logged customer issues in a ticketing system and followed up by email.',
-    'Handled refund requests and passed difficult cases to a supervisor.',
-    'Responded to live chat messages during evening shifts.'] },
-  { titles: ['Retail Associate', 'Cashier'], orgs: ['Lakeside Electronics', 'Maple Street Grocers', 'Sunrise Outfitters', 'Harbor Home Goods'], bullets: [
-    'Helped shoppers find products and processed returns.',
-    'Ran the register and balanced the till at the end of each shift.',
-    'Dealt with complaints about prices and faulty items, calling a manager when needed.'] },
-  { titles: ['Front Desk Agent', 'Guest Services Associate (front desk)'], orgs: ['Riverside Hotel', 'Grand Plaza Hotel'], bullets: [
-    'Helped guests with check-in, questions and complaints.',
-    'Answered the phone and took room bookings.',
-    'Sorted out billing mistakes on guest accounts.'] },
+  { titles: ['Customer Service Representative', 'Call Centre Agent'], orgs: SUPPORT_ORGS, tools: ['Freshdesk', 'Zendesk', 'HubSpot Service Hub'], bullets: (r, tool) => [
+    'Answered customer calls and live chats about orders, deliveries and returns.',
+    `Replied to customer emails and logged every case in ${tool} so nothing was lost between shifts.`,
+    'Handled complaints and refund requests, passing difficult cases to a supervisor.',
+    'Went through my customer satisfaction results with my team lead each month.'] },
+  { titles: ['Retail Associate', 'Cashier'], orgs: ['Lakeside Electronics', 'Maple Street Grocers', 'Sunrise Outfitters', 'Harbor Home Goods'], tools: ['Shopify', 'Lightspeed'], bullets: (r, tool) => [
+    'Served shoppers at the register and the returns desk, mostly on busy weekend shifts.',
+    'Handled complaints about prices and faulty items, calling a manager when needed.',
+    `Answered customer emails for the online shop and looked up orders in ${tool}.`,
+    "Helped the store prepare for its mystery-shopper visits on service standards."] },
+  { titles: ['Front Desk Agent', 'Guest Services Associate (front desk)'], orgs: ['Riverside Hotel', 'Grand Plaza Hotel'], tools: ['Opera PMS', 'Cloudbeds'], bullets: (r, tool) => [
+    `Checked in guests and answered phone and email booking requests in ${tool}.`,
+    'Dealt with billing mistakes and noise complaints, escalating refunds to the manager.',
+    'Wrote replies to online guest reviews on behalf of the front desk team.',
+    'Guest review scores were shared with the team every month.'] },
 ];
 
 function csrMediumJob(r, years) {
   const s = r.pick(CSR_MEDIUM_SETTINGS);
-  return { title: r.pick(s.titles), org: r.pick(s.orgs), years, bullets: r.sample(s.bullets, r.int(2, 3)) };
+  return { title: r.pick(s.titles), org: r.pick(s.orgs), years, bullets: s.bullets(r, r.pick(s.tools)) };
 }
 
 function sdrStrongJob(r, years) {
@@ -106,17 +114,22 @@ function sdrStrongJob(r, years) {
   return { title: r.pick(['Sales Development Representative', 'Senior SDR', 'Business Development Representative', 'Outbound SDR Team Lead']), org: r.pick(SALES_ORGS), years, bullets };
 }
 
+// MEDIUM tier, calibrated against the sdr anchors (L-005), target about 55-70 (MAYBE):
+//   prospecting 3 (regular calls, volume stated) · quota 2-3 (numbers, short record) · research 1-2
+//   objections 2 (mentioned, simple approach) · tools 2-3 (one CRM, how used) · B2B 2 (business buyers, little detail)
+//   Weighted: about 18.75 + 12.5 + 5.6 + 7.5 + 9.4 + 5 ≈ 59.
 function sdrMediumJob(r, years) {
+  const months = r.int(8, 12);
   return {
     title: r.pick(['Inside Sales Representative', 'Telemarketing Agent', 'Junior Business Development Representative', 'Lead Generation Assistant', 'Outbound Call Agent']),
     org: r.pick(SALES_ORGS), years,
-    bullets: r.sample([
-      'Made phone calls to small businesses to set appointments for account managers.',
-      'Followed up with inbound leads by email and phone.',
-      'Tracked leads and calls in HubSpot.',
-      'Met monthly targets for booked demos most months.',
-      'Prepared lists of local businesses to contact.',
-    ], r.int(2, 3)),
+    bullets: [
+      `Made about ${r.int(40, 55)} outbound calls a day to small businesses to book demos for ${r.int(2, 3)} account managers.`,
+      `Booked about ${r.int(6, 10)} meetings a month and hit the monthly target in ${months - r.int(2, 4)} of ${months} months.`,
+      `Logged calls, follow-ups and lead notes in ${r.pick(['HubSpot', 'Pipedrive'])} every day.`,
+      'Used a simple script to answer common objections about price and contract length.',
+      `Called mostly ${r.pick(['restaurant and retail owners', 'dental and clinic managers', 'gym and studio owners'])} in the local area.`,
+    ],
   };
 }
 

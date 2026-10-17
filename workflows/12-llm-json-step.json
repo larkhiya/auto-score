@@ -142,7 +142,7 @@
     {
       "credentials": {
         "googlePalmApi": {
-          "name": "Gemini API"
+          "name": "Google Gemini(PaLM) Api account"
         }
       },
       "id": "4c129f8c-6d9a-43e0-beca-edab5a7d2d36",
