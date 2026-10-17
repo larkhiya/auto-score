@@ -4,15 +4,15 @@
 ## Now / Next / Blocked
 - **Now:** Phase 4 pre-filter as pure, tested code (needs no n8n)
 - **Next:** Phase 3 intake workflows (WF-01, WF-02), then wiring Phase 4 into WF-10
-- **Blocked:**
+- **Blocked:** nothing (both keys in .env; CRM resets approved, D-022)
   - `N8N_API_KEY` (learner creates it in the n8n editor) blocks importing and running workflows (Phase 0 hello run, Phase 1 mapping demo, Phase 3+).
   - Reseeding the CRM with the regenerated dataset needs approval to reset (delete) the 222 synthetic candidates seeded earlier (`scripts/reset-crm.js --yes`).
 
 ## Phases
 | # | Phase | Status | Planned | Done | Tag |
 |---|---|---|---|---|---|
-| 0 | Orientation and setup | 🟨 hello workflow not yet run in n8n | 2026-10-17 | | |
-| 1 | Contracts and job profiles | 🟨 mapping demo not yet run in n8n | 2026-10-17 | | |
+| 0 | Orientation and setup | ✅* | 2026-10-17 | 2026-10-17 | phase-0 |
+| 1 | Contracts and job profiles | ✅* | 2026-10-17 | 2026-10-17 | phase-1 |
 | 2 | Mock CRM and synthetic applicants | 🟨 reseed pending | 2026-10-17 | | |
 | 3 | Triggers and intake | ⬜ | straight-through | | |
 | 4 | Boolean pre-filter | ⬜ | straight-through | | |
@@ -22,20 +22,21 @@
 | 8 | Prove it works every time | ⬜ | straight-through | | |
 | 9 | Package for portfolio and interviews | ⬜ | straight-through | | |
 
-Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items met, with evidence)
+Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items met, with evidence) · ✅* done except the learner's own items, deferred under D-008
 
 ## Phase checklists
 **Phase 0**
 - [x] n8n runs from Compose (2.43.7, healthy; editor HTTP 200)
-- [ ] Hello workflow run in n8n, execution ID recorded (blocked: API key). Learner's prediction exercise deferred (D-008).
+- [x] Hello workflow run in n8n: execution **1**, status success; items per node 1 → 3 → 3 → 2 → 2. Learner's prediction exercise deferred (D-008).
+- [x] Sync method proven: `npm run n8n:roundtrip` → "Round trip lossless."
 - [x] All docs exist
-- [x] First commit made (`f78ea25`) · [ ] tagged `phase-0`
+- [x] First commit made (`f78ea25`) · tagged `phase-0`
 
 **Phase 1**
 - [x] 7 schemas + 11 valid / 24 invalid fixtures; contract tests pass
 - [x] csr.v1 and sdr.v1 validate (schema + code checks)
+- [x] Expression mapping demo ran in n8n (execution 1: `execution_id` mapped from `{{ $execution.id }}` = "1")
 - [ ] C-05 at can-explain (deferred, ⏭)
-- [ ] Expression mapping demo run in n8n (blocked: API key)
 
 **Phase 2**
 - [x] CRM in Compose; n8n reaches it by service name (`wget http://crm:3000/health` from the n8n container → `{"ok":true}`)

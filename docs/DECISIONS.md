@@ -12,6 +12,29 @@ Under D-008, Claude makes design choices during the straight-through build and m
 
 ---
 
+## D-022 · Standing approval to reset the CRM's synthetic candidates during the build
+- **Date:** 2026-10-17 · **Phase:** 2 · **Status:** accepted
+- **Decided by:** learner
+- **Decision:** Claude may run `scripts/reset-crm.js --yes` (delete all candidates, keep job profiles) whenever a clean run needs it during this build. Synthetic local data only. Each reset is noted in the PROGRESS session log.
+- **Revisit if:** the CRM ever holds anything that isn't regenerable.
+
+## D-021 · Evidence policy and redaction before the LLM
+- **Date:** 2026-10-17 · **Phase:** 5 · **Status:** pending learner review
+- **Decided by:** Claude (D-008), answering brief §5.2's two open questions
+- **Decision:**
+  - **Unverified quote:** that criterion's score becomes 0 (no evidence, no points). Two or more unverified quotes in one ScoreCard → NEEDS_REVIEW (`EVIDENCE_NOT_VERIFIED`), because the model is clearly not grounded on that CV. Extraction items with unverified quotes are dropped before the scoring call.
+  - **Redaction: yes.** Name, email, phone, URLs, street addresses and the stated location are replaced with placeholders before either LLM call. Quotes are verified against the same redacted text.
+- **Why:** zeroing is the conservative, explainable default. Redaction makes the name-swap counterfactual hold by construction: identical model input for identical CVs (tested on all 4 dataset pairs).
+- **Trade-offs accepted:** a genuinely good candidate whose quote the model mangled loses those points. The breakdown shows `evidence_verified: false`, so a reviewer can spot it.
+- **Revisit if:** Phase 8 shows many zeroed criteria from formatting differences rather than hallucination.
+
+## D-020 · Two LLM calls (extract, then score)
+- **Date:** 2026-10-17 · **Phase:** 5 · **Status:** pending learner review
+- **Decided by:** Claude (D-008; brief §5.2 default)
+- **Options:** A: one call that extracts and scores (+ half the calls, which matters on the free tier; − harder to debug, one big output) · B: two calls (+ each output is small and checkable, extraction is reusable across roles; − twice the calls)
+- **Decision:** B. Call 1 returns a CandidateProfile (role-agnostic facts with quotes). Call 2 gets the profile, the redacted CV and the job's rubric, and returns a ScoreCard. The model and the node-vs-HTTP choice are recorded once the Gemini quotas are known.
+- **Revisit if:** free-tier daily limits make the Phase 8 runs impractical.
+
 ## D-019 · Synthetic data: template-based, seeded, answer key written from persona design
 - **Date:** 2026-10-17 · **Phase:** 2 · **Status:** pending learner review
 - **Decided by:** Claude (D-008)
