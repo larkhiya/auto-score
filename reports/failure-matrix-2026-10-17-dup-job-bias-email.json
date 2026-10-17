@@ -1,0 +1,218 @@
+{
+  "at": "2026-10-17T17:26:19.070Z",
+  "stamp": "mvco3uih",
+  "groups": [
+    "dup",
+    "job",
+    "bias",
+    "email"
+  ],
+  "crashed": null,
+  "results": [
+    {
+      "group": "dup",
+      "row": "The same application delivered twice → processed once",
+      "check": "webhook delivered 3 times: 2 at once, 1 after it finished",
+      "expected": "1 claim, 1 final transition, PREFILTER_REJECTED",
+      "actual": "1 claim, 1 final, PREFILTER_REJECTED (webhooks 202/202/202)",
+      "pass": true,
+      "evidence": {
+        "application_id": "app_000340",
+        "history": [
+          {
+            "from_status": null,
+            "to_status": "NEW",
+            "actor": "system",
+            "execution_id": null,
+            "note": "created via crm",
+            "at": "2026-10-17T17:25:47.075Z"
+          },
+          {
+            "from_status": "NEW",
+            "to_status": "SCREENING",
+            "actor": "automation",
+            "execution_id": "2387",
+            "note": null,
+            "at": "2026-10-17T17:25:47.860Z"
+          },
+          {
+            "from_status": "SCREENING",
+            "to_status": "PREFILTER_REJECTED",
+            "actor": "automation",
+            "execution_id": "2387",
+            "note": "NO_CUSTOMER_FACING_EXPERIENCE",
+            "at": "2026-10-17T17:25:48.791Z"
+          }
+        ]
+      }
+    },
+    {
+      "group": "job",
+      "row": "Application for an unknown or not-yet-approved job → NEEDS_REVIEW, never scored against a guess",
+      "check": "application to \"carebias\" (a draft that was never approved)",
+      "expected": "NEEDS_REVIEW JOB_NOT_APPROVED, 0 LLM calls",
+      "actual": "NEEDS_REVIEW JOB_NOT_APPROVED, 0 LLM calls",
+      "pass": true,
+      "evidence": {
+        "application_id": "app_000341"
+      }
+    },
+    {
+      "group": "job",
+      "row": "Application for an unknown or not-yet-approved job → NEEDS_REVIEW, never scored against a guess",
+      "check": "CRM API application to a job id that does not exist",
+      "expected": "refused at the door (404 JOB_NOT_FOUND), no record created",
+      "actual": "refused: JOB_NOT_FOUND",
+      "pass": true,
+      "evidence": {}
+    },
+    {
+      "group": "bias",
+      "row": "Biased job description → bias flags shown on the draft, and approval blocked until a human resolves them",
+      "check": "the planted biased JD (carebias) draft and its job page",
+      "expected": "unresolved flags on the draft; Approve button disabled (the server also refuses: tests/jobprofile.test.js)",
+      "actual": "9 unresolved flags (age, gender, language_origin, nationality, marital_status, appearance); Approve disabled",
+      "pass": true,
+      "evidence": {
+        "flags": [
+          {
+            "category": "age",
+            "phrase": "young",
+            "target": "jd"
+          },
+          {
+            "category": "age",
+            "phrase": "Recent graduates",
+            "target": "jd"
+          },
+          {
+            "category": "age",
+            "phrase": "digital natives",
+            "target": "jd"
+          },
+          {
+            "category": "gender",
+            "phrase": "She",
+            "target": "jd"
+          },
+          {
+            "category": "language_origin",
+            "phrase": "Native English speaker",
+            "target": "jd"
+          },
+          {
+            "category": "nationality",
+            "phrase": "citizens only",
+            "target": "jd"
+          },
+          {
+            "category": "marital_status",
+            "phrase": "no children",
+            "target": "jd"
+          },
+          {
+            "category": "appearance",
+            "phrase": "include a recent photo",
+            "target": "jd"
+          },
+          {
+            "category": "nationality",
+            "phrase": "citizens only",
+            "target": "prefilter:1"
+          }
+        ]
+      }
+    },
+    {
+      "group": "email",
+      "row": "Missing attachment, scanned PDF with no text layer, DOCX, very long CV, non-English CV, empty email body",
+      "check": "email-1: csr_strong.pdf → applications+csr@autoscore.test",
+      "expected": "1 record, job csr, NEEDS_REVIEW incl. MISSING_ANSWER, pdf_text",
+      "actual": "1 record, job csr, NEEDS_REVIEW MISSING_ANSWER, pdf_text",
+      "pass": true,
+      "evidence": {
+        "application_ids": [
+          "app_000342"
+        ]
+      }
+    },
+    {
+      "group": "email",
+      "row": "Missing attachment, scanned PDF with no text layer, DOCX, very long CV, non-English CV, empty email body",
+      "check": "email-2: sdr_medium.docx → applications+sdr@autoscore.test",
+      "expected": "1 record, job sdr, NEEDS_REVIEW incl. MISSING_ANSWER, docx",
+      "actual": "1 record, job sdr, NEEDS_REVIEW MISSING_ANSWER, docx",
+      "pass": true,
+      "evidence": {
+        "application_ids": [
+          "app_000343"
+        ]
+      }
+    },
+    {
+      "group": "email",
+      "row": "The same application delivered twice → processed once",
+      "check": "email-3: csr_medium.txt → applications+csr@autoscore.test, sent twice (same Message-ID)",
+      "expected": "1 record, job csr, NEEDS_REVIEW incl. MISSING_ANSWER, plain_text",
+      "actual": "1 record, job csr, NEEDS_REVIEW MISSING_ANSWER, plain_text",
+      "pass": true,
+      "evidence": {
+        "application_ids": [
+          "app_000344"
+        ]
+      }
+    },
+    {
+      "group": "email",
+      "row": "Missing attachment, scanned PDF with no text layer, DOCX, very long CV, non-English CV, empty email body",
+      "check": "email-4: scanned_no_text.pdf → applications+csr@autoscore.test",
+      "expected": "1 record, job csr, NEEDS_REVIEW incl. UNREADABLE_CV, pdf_text, NO_TEXT_LAYER",
+      "actual": "1 record, job csr, NEEDS_REVIEW UNREADABLE_CV,MISSING_ANSWER, pdf_text, NO_TEXT_LAYER",
+      "pass": true,
+      "evidence": {
+        "application_ids": [
+          "app_000345"
+        ]
+      }
+    },
+    {
+      "group": "email",
+      "row": "Missing attachment, scanned PDF with no text layer, DOCX, very long CV, non-English CV, empty email body",
+      "check": "email-5: no attachment → applications+sdr@autoscore.test",
+      "expected": "1 record, job sdr, NEEDS_REVIEW incl. UNREADABLE_CV, NO_ATTACHMENT",
+      "actual": "1 record, job sdr, NEEDS_REVIEW UNREADABLE_CV,MISSING_ANSWER, none, NO_ATTACHMENT",
+      "pass": true,
+      "evidence": {
+        "application_ids": [
+          "app_000347"
+        ]
+      }
+    },
+    {
+      "group": "email",
+      "row": "Application for an unknown or not-yet-approved job → NEEDS_REVIEW, never scored against a guess",
+      "check": "email-6: csr_medium.txt → applications+zzz@autoscore.test",
+      "expected": "1 record, job null, NEEDS_REVIEW incl. JOB_NOT_ROUTED",
+      "actual": "1 record, job null, NEEDS_REVIEW JOB_NOT_ROUTED, plain_text",
+      "pass": true,
+      "evidence": {
+        "application_ids": [
+          "app_000346"
+        ]
+      }
+    },
+    {
+      "group": "email",
+      "row": "Missing attachment, scanned PDF with no text layer, DOCX, very long CV, non-English CV, empty email body",
+      "check": "email-7: csr_medium.txt, empty body → applications+csr@autoscore.test",
+      "expected": "1 record, job csr, NEEDS_REVIEW incl. MISSING_ANSWER, plain_text",
+      "actual": "1 record, job csr, NEEDS_REVIEW MISSING_ANSWER, plain_text",
+      "pass": true,
+      "evidence": {
+        "application_ids": [
+          "app_000348"
+        ]
+      }
+    }
+  ]
+}

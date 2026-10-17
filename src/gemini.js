@@ -16,6 +16,11 @@ function buildRequest({ system, user, responseSchema, temperature = 0, maxOutput
   };
 }
 
+// generateContent URL for a model. base = settings.LLM_BASE_URL (the proxy) or Google's host.
+function endpoint(base, model) {
+  return `${String(base).replace(/\/+$/, '')}/v1beta/models/${model}:generateContent`;
+}
+
 // → { text, finishReason, usage: { input_tokens, output_tokens }, model, blockReason }
 function readResponse(body) {
   const b = body || {};
@@ -43,4 +48,4 @@ function retryDelaySeconds(body) {
   return null;
 }
 
-module.exports = { DEFAULT_MODEL, buildRequest, readResponse, retryDelaySeconds };
+module.exports = { DEFAULT_MODEL, buildRequest, endpoint, readResponse, retryDelaySeconds };

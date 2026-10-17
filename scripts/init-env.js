@@ -17,6 +17,7 @@ const GENERATED = {
   CRM_API_KEY: () => 'crm_' + crypto.randomBytes(18).toString('base64url'),
   CRM_WEBHOOK_SECRET: () => 'whs_' + crypto.randomBytes(18).toString('base64url'),
   MAIL_PASSWORD: () => crypto.randomBytes(12).toString('base64url'),
+  LLM_PROXY_ADMIN_KEY: () => 'llmp_' + crypto.randomBytes(18).toString('base64url'),
 };
 const LEARNER_OWNED = ['N8N_API_KEY', 'GEMINI_API_KEY'];
 

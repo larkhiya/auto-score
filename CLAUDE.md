@@ -106,8 +106,9 @@ Run it, show the evidence (test output, execution ID, CRM state) and update the 
 <!-- One line each: "- (L-###) rule". Keep 20 or fewer; merge or retire rules that overlap. -->
 - (L-001) Pipe container logs and any output that can echo config through `node scripts/redact.js`; never rely on keyword filters to hide secrets.
 - (L-002) Read the surrounding code before inserting into a file (no blind scripted replacements); test teardown must work even if setup failed halfway.
-- (L-003) Never put file content in a double-quoted shell string (`node -e "..."`, `sed "..."`): bash runs backticks and expands `$`. Use Edit/Write, or a quoted heredoc `<<'EOF'`.
+- (L-003, L-012) Never put file content in a double-quoted shell string (`node -e "..."`, `sed "..."`): bash runs backticks and expands `$`. Change code with Edit/Write; scripted edits (quoted heredoc `<<'EOF'`) are for data only, because a string literal inside the script is another escaping layer.
 - (L-004) Capture what a call actually sends (echo server or execution data) before theorising; never set n8n switch parameters (`sendBody`, `sendHeaders`, `authentication`, `resource`, `operation`) with expressions.
 - (L-005) Calibrate synthetic personas against the rubric anchors by hand (expected 0–4 per criterion and total) before trusting them as ground truth.
 - (L-007) After `npm run build`, import ALL workflows (a src module can be bundled into several) and run `npm run n8n:drift`.
 - (L-009) Unit tests stay offline: `npm test` only runs `tests/**/*.test.js`; never name a live script `*-test.js`.
+- (L-014) Before any run of more than 20 LLM calls, state the provider's real daily limit (read it from the provider, e.g. the 429 body, not third-party posts) and the calls already used that day; plan each run to finish inside one quota day.

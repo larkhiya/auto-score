@@ -31,6 +31,9 @@ flowchart LR
   P -->|pass| RD["Redact name and contacts"]
   RD --> L1["LLM 1: extract CandidateProfile"]
   L1 --> L2["LLM 2: score the job's rubric → ScoreCard"]
+  L1 -.->|"WF-12 → llm-proxy → Gemini<br/>(faults injectable, D-031)"| GP[("llm-proxy")]
+  L2 -.-> GP
+  L1 -->|"LLM unavailable after retries"| DL
   L2 --> C{"Validate JSON<br/>verify evidence quotes"}
   C -->|invalid after 1 repair| R
   C -->|ok| M["Code: weighted total →<br/>status from thresholds"]
@@ -58,9 +61,11 @@ flowchart LR
 | WF-91 | Dead letter | `workflows/91-dead-letter.json` | n8n Data Table `dead_letters` (works while the CRM is down) + best-effort CRM ERROR + email to ops + RunLog (D-028) |
 | Replay | Dead-letter replay | `scripts/replay-dlq.js` | open rows → ERROR → `application.replay` → WF-10 reclaims ERROR→SCREENING; idempotent |
 | CRM | Mock CRM | `crm/` | Node 24 + Express + `node:sqlite`; REST, webhooks, pages, failure simulation |
+| Proxy | LLM proxy | `llm-proxy/` · Compose service `llm-proxy` | between WF-12 and Gemini: forwards unchanged; `/admin/chaos` arms rate_limit / server_error / invalid_json / timeout for the next N calls (D-031); never logs the key |
+| Eval | Evaluation tooling | `scripts/eval-smoke.js`, `failure-matrix.js`, `eval-report.js`, `role-switch-report.js` | regression smoke (5 per role), §5.4 failure-injection matrix, `reports/eval-<date>.md` |
 | src | Pure logic | `src/` | inlined into Code nodes by `scripts/build-workflows.js` (drift-tested) |
 | Mail | GreenMail | Compose service `greenmail` | SMTP 3025 and IMAP 3143, test only |
 
 ## Network (Docker Compose)
-- Containers reach each other by service name: n8n → `http://crm:3000`, CRM → `http://n8n:5678/webhook/...`, n8n → `greenmail:3143`.
-- From the host: n8n editor `http://localhost:5678`, CRM `http://localhost:3000`.
+- Containers reach each other by service name: n8n → `http://crm:3000`, CRM → `http://n8n:5678/webhook/...`, n8n → `greenmail:3143`, n8n → `http://llm-proxy:8090` → `https://generativelanguage.googleapis.com`.
+- From the host: n8n editor `http://localhost:5678`, CRM `http://localhost:3000`, llm-proxy admin `http://127.0.0.1:8090` (bound to loopback only).

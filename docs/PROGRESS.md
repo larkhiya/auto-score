@@ -2,10 +2,10 @@
 **Current phase:** 8 — Prove it works every time · **Target finish:** straight-through build (D-008) · **Pace:** continuous; learner now doing retrieval questions at session start
 
 ## Now / Next / Blocked
-- **Now:** Phase 7 done (✅*); Phase 8 next
-- **Next:** Phase 8 full eval incl. v1 vs v2 on identical data (reseed first; ask before the large run)
-- **Blocked:** nothing
-- **Notes:** CRM resets under D-022 on 2026-10-17 (dedupe proof; dataset recalibrations L-005). The dataset was regenerated after the v2 run (long-CV dates), so reseed before Phase 8. The n8n Gemini credential is named "Google Gemini(PaLM) Api account".
+- **Now:** Phase 8: tooling built, failure matrix 13/13 on the non-LLM rows; the Gemini daily quota (500) is used up until about 00:00 UTC
+- **Next:** LLM-fault matrix rows (~9 calls), full dataset run (~370), consistency (~80), v1 vs v2, final eval:smoke, eval report
+- **Blocked:** the large run waits for (1) the quota reset and (2) the learner's choice of how to split it across quota days (L-014)
+- **Notes:** no CRM reset for Phase 8: every run screens tagged copies (`<ref>~e1` etc.), so earlier evidence stays. The n8n Gemini credential is named "Google Gemini(PaLM) Api account".
 
 ## Phases
 | # | Phase | Status | Planned | Done | Tag |
@@ -18,7 +18,7 @@
 | 5 | AI screening and scoring | ✅* | 2026-10-17 | 2026-10-17 | phase-5 |
 | 6 | CRM write-back and error handling | ✅* | 2026-10-17 | 2026-10-17 | phase-6 |
 | 7 | Add any role from a job description | ✅* | 2026-10-18 | 2026-10-18 | phase-7 |
-| 8 | Prove it works every time | ⬜ | straight-through | | |
+| 8 | Prove it works every time | 🟨 | straight-through | | |
 | 9 | Package for portfolio and interviews | ⬜ | straight-through | | |
 
 Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items met, with evidence) · ✅* done except the learner's own items, deferred under D-008
@@ -96,13 +96,43 @@ Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items m
 - Finding (role switch): the gaps are lopsided. Support CVs lose 44–74 points as SDRs (all 10 NOT_A_FIT). Prospecting CVs lose only 1.25–46 points as CSRs, 4 of 10 are still SHORTLISTED as CSRs, and `rs-12` held its direction by 1.25 points. Cause: the csr criteria are generic enough that sales evidence counts. Across the 10 prospecting CVs scored for csr, any quota number earns `results_evidence` 3.8/4 on average, HubSpot call-logging earns `support_tools` 3/4, cold calls count as customer-facing (2.8) and objection handling counts as de-escalation (2.6). The sdr rubric is specific, so it doesn't happen the other way. Same root as the Phase 5 cross-applicant misses (D-027). Fix = a csr v2 with support-specific anchors (learner's decision).
 - Caveat: Admin scores are flat (every strong 100, every medium 65) because the personas are templates. That shows the anchors are applied consistently, not that scoring is accurate on varied CVs. Phase 8 should add varied CVs.
 
+**Phase 8**
+- [x] LLM fault injection: `llm-proxy/` in front of Gemini (D-031); 6 offline tests; 0 proxy log lines contain the key
+- [x] `npm run eval:smoke` (5 records per role, end to end, fresh copies each run): **15/15**, 18 LLM calls, all through the proxy
+- [x] `npm test`: 164/164
+- [x] Failure matrix, non-LLM rows: **13/13** (`reports/failure-matrix-2026-10-17-dup-job-bias-email.json`, `…-crm.json`):
+  - duplicate webhook ×3 → 1 claim
+  - unapproved job → JOB_NOT_APPROVED; unknown job id refused (JOB_NOT_FOUND)
+  - biased draft: 9 unresolved flags, Approve disabled
+  - 7 emails (PDF, DOCX, TXT sent twice, scanned, no attachment, unknown job, empty body)
+  - CRM at 30% failures + 300 ms latency: 10 in = 10 out
+  - CRM container stopped for 40 s: 6 in = 6 out, 4 dead letters replayed, 6/6 final
+- [~] Failure matrix, LLM rows (first run, before the quota ran out):
+  - invalid JSON once → repaired → SHORTLISTED ✓
+  - invalid JSON twice → NEEDS_REVIEW INVALID_MODEL_OUTPUT ✓
+  - 90 s timeout → retried → SHORTLISTED ✓
+  - 503 until switched off → ERROR + dead letter → replayed → SHORTLISTED (the check itself was cut short by the harness crash, L-013)
+  - rate limit: real quota exhaustion followed the injected 429s, so the clean "backoff then success" case still needs a run on a fresh quota
+- [x] Fixed what the matrix found: harness crash (L-013); scanned-PDF `extraction_method` inconsistency (contract + generator, D-032)
+- [ ] Full dataset run, consistency, v1 vs v2, `reports/eval-<date>.md`
+- [ ] Final `npm test` + `npm run eval:smoke` as the regression check
+- [ ] Learner: read the confusion matrices and explain the biggest error pattern first
+
 ## Learner review pass (D-008), collected as we go
 - Concepts deferred: see LEARNING (`⏭`)
-- Decisions to confirm: D-014 to D-021, D-023 to D-025, D-028 to D-030 (`pending learner review`)
+- Decisions to confirm: D-014 to D-021, D-023 to D-025, D-028 to D-032 (`pending learner review`)
 - Profile review: the Admin v1 gaps above (missing PA titles, English, Office as a criterion rather than a must-have), and the csr anchors that credit sales evidence (role-switch finding). Decide whether to make v2s
 - Exercises: hello-items item-count prediction (Phase 0); find a loose field in the ScoreCard schema (Phase 1); spot-check 10 answer-key rows (Phase 2)
 
 ## Session log (newest first)
+### S-02 (continued) · 2026-10-18 · Phase 8 (part 1)
+- Done: llm-proxy + seam (`LLM_BASE_URL`); `scripts/lib/pipeline.js`; seed variants; `eval-smoke`, `failure-matrix`, `eval-report`; matrix run; fixes (harness, scanned-PDF convention)
+- Verified (evidence): eval:smoke 15/15; matrix 13/13 non-LLM rows plus 3 LLM rows passing; 164 tests; n8n matches git
+- Not yet verified: the full dataset run and everything computed from it; the rate-limit "backoff then success" row on a fresh quota
+- Decisions: D-031, D-032 (+ D-007 quota fact) · Lessons: L-012, L-013, L-014 (Learned Rules L-003 widened, L-014 added)
+- LLM calls this part: about 27 before the daily quota (500) ran out
+- Next: the learner picks how to split the large run across quota days
+
 ### S-02 (continued) · 2026-10-18 · Phase 7 (part 2)
 - Done: confirmed the learner's Admin approval in the CRM database; `scripts/export-profile.js`; Admin personas (`scripts/lib/personas-admin.js`, calibrated to the approved anchors, L-005); generator extended on its own random stream; answer-key test covers admin; seeded and screened 31 Admin applicants; JOB_NOT_APPROVED check; no-code-change diff
 - Verified (evidence): see the Phase 7 checklist; 158 unit tests; n8n matches git

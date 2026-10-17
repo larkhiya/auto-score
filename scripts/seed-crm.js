@@ -4,11 +4,13 @@
 //   node scripts/seed-crm.js --job csr --limit 5  a subset
 //   node scripts/seed-crm.js --notify --delay 500 fire the webhook per record, 500 ms apart (triggers WF-01)
 //   node scripts/seed-crm.js --role-switch        load data/role_switch.json against BOTH csr and sdr
+//   node scripts/seed-crm.js --refs csr-003 --variant c2   a copy for a repeat run (ref csr-003~c2)
 // Idempotent: the CRM returns the existing record for a repeated delivery. Writes data/out/seed-map.json.
 const fs = require('node:fs');
 const path = require('node:path');
 const { ROOT } = require('./lib/env');
 const { crm } = require('./lib/crm-client');
+const { variant } = require('./lib/pipeline');
 
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(`--${name}`);
@@ -24,7 +26,9 @@ function records() {
   if (job) list = list.filter((a) => a.job_id === job);
   const refs = opt('refs');
   if (refs) { const set = new Set(refs.split(',')); list = list.filter((a) => set.has(a.ref)); }
-  return list.slice(0, Number(opt('limit', list.length)));
+  list = list.slice(0, Number(opt('limit', list.length)));
+  // Repeat runs (consistency, prompt comparison, chaos) seed copies: refs "<ref>~<tag>", plus-tagged emails.
+  return opt('variant') ? list.map((a) => variant(a, opt('variant'))) : list;
 }
 
 async function main() {

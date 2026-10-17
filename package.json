@@ -22,7 +22,8 @@
     "replay": "node scripts/replay-dlq.js",
     "chaos": "node scripts/chaos-run.js",
     "setup:dlq": "node scripts/n8n-setup-dlq.js",
-    "check:injection": "node scripts/injection-check.js"
+    "check:injection": "node scripts/injection-check.js",
+    "eval:smoke": "node scripts/eval-smoke.js"
   },
   "dependencies": {
     "ajv": "^8.20.0",

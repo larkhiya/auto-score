@@ -1,0 +1,33 @@
+{
+  "at": "2026-10-17T17:24:44.204Z",
+  "stamp": "mvcnxkjr",
+  "groups": [
+    "crm"
+  ],
+  "crashed": null,
+  "results": [
+    {
+      "group": "crm",
+      "row": "CRM down or slow → retried, then ERROR + dead letter, replayable",
+      "check": "FAIL_RATE 0.3 and 300 ms latency on every CRM call, 10 records",
+      "expected": "retries absorb the failures; records in = records out",
+      "actual": "records in 10 = records out 10 · saved reports\\chaos-2026-10-17T17-22-21-724Z.json",
+      "pass": true,
+      "evidence": {
+        "report": "reports\\chaos-2026-10-17T17-22-21-724Z.json"
+      }
+    },
+    {
+      "group": "crm",
+      "row": "CRM down or slow → retried, then ERROR + dead letter, replayable",
+      "check": "CRM container stopped after 2 of 6 records for 40 s, then replay-dlq",
+      "expected": "records in = records out during the outage; after replay all 6 final",
+      "actual": "records in 6 = records out 6 · saved reports\\chaos-2026-10-17T17-23-58-863Z.json · replay: {\"open\":4,\"replayed\":4,\"resolved\":0,\"retry_failed\":0,\"manual\":0,\"duplicate_rows\":0} · after replay 6/6 final",
+      "pass": true,
+      "evidence": {
+        "report": "reports\\chaos-2026-10-17T17-23-58-863Z.json",
+        "replay_exit": 0
+      }
+    }
+  ]
+}

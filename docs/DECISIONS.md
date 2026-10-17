@@ -12,6 +12,30 @@ Under D-008, Claude makes design choices during the straight-through build and m
 
 ---
 
+## D-032 · Three places the system is deliberately more specific than the brief's §5.4 wording
+- **Date:** 2026-10-18 · **Phase:** 8 · **Status:** pending learner review
+- **Decided by:** Claude (D-008), made explicit by the failure-injection matrix
+- **Context:** the matrix compares behaviour against §5.4 line by line. Three rows behave differently from the brief's literal wording, by earlier design choices that were never written down as deviations.
+- **Decision (each one documented, not changed):**
+  1. **LLM unavailable** (429/5xx/timeouts after the retry budget) → **ERROR + dead letter, replayed later**, not NEEDS_REVIEW. Invalid model output after one repair still → NEEDS_REVIEW `INVALID_MODEL_OUTPUT`, as the brief says. Why: an outage says nothing about the candidate. A person would review a CV only because Google was down, and the record would never be scored automatically again; replay finishes it (D-028).
+  2. **Unknown job** → NEEDS_REVIEW with `JOB_NOT_ROUTED` (an email to an unknown plus-address, job null) or is refused at the CRM door with `JOB_NOT_FOUND` (an API call to a job id that doesn't exist). `JOB_NOT_APPROVED` stays for a real job without an approved profile. Why: three different fixes for three different causes; one code would hide which.
+  3. **Scanned PDF** → `extraction_method: pdf_text` + `extraction_error: NO_TEXT_LAYER` (the method tried); `none` only when there was nothing to try. Written into the contract's description; the generator now matches `src/extract.js`.
+- **Trade-offs accepted:** the report cannot be checked against the brief's wording blindly; these three rows point here.
+- **Revisit if:** the learner prefers the brief's literal behaviour for (1). That's a one-line change in WF-10, plus a matrix expectation.
+
+## D-031 · A local LLM proxy sits in front of Gemini, so LLM failures can be injected on purpose
+- **Date:** 2026-10-18 · **Phase:** 8 · **Status:** pending learner review
+- **Decided by:** Claude (D-008)
+- **Context:** §5.4 asks us to prove that invalid JSON, timeouts and rate limits from the LLM end in a repair, a backoff or a known state. Until Phase 8 that was only unit-tested: you can't make Google misbehave on demand. The CRM already has a runtime fault switch (`FAIL_RATE`, `/admin/chaos`); the LLM had none.
+- **Options:**
+  - A: document the row as a known limitation (unit tests only) (+ no new component; − the core AI reliability claim stays unproven live)
+  - B: a test-only base-URL switch: rebuild WF-12 pointing at a fake, run, rebuild back (+ production path untouched; − every chaos test is a deploy, and forgetting to switch back breaks production)
+  - C: a small proxy (`llm-proxy/`) always in the path, forwarding unchanged unless a fault is armed at runtime (+ same model as the CRM's chaos switch, faults hit exactly the next N calls, one place to see every LLM call; − one more container and network hop; the API key passes through our own code)
+- **Decision:** C. `src/settings.js` `LLM_BASE_URL` points WF-12 at `http://llm-proxy:8090`; `llm-proxy/chaos.js` (unit-tested) injects `rate_limit` (429 + RetryInfo), `server_error` (503), `invalid_json` (a well-formed reply whose text isn't JSON) or `timeout`. The admin endpoint needs `LLM_PROXY_ADMIN_KEY` and is bound to 127.0.0.1.
+- **Why:** it proves the claim with the real pipeline, without redeploying, and it can't be left "on" by accident (a fault switches itself off after N calls).
+- **Trade-offs accepted:** the key travels on the URL (`?key=`, how the n8n Gemini credential sends it) through the proxy. The proxy never logs URLs or headers; checked: 0 log lines contain `key=`.
+- **Revisit if:** this moves beyond a local replica. Then point `LLM_BASE_URL` straight at Google, or use a real gateway.
+
 ## D-030 · The answer key follows the APPROVED profile; rule-quality problems are findings for a person
 - **Date:** 2026-10-18 · **Phase:** 7 · **Status:** pending learner review
 - **Decided by:** Claude (D-008)
@@ -287,6 +311,7 @@ Under D-008, Claude makes design choices during the straight-through build and m
 - **Why:** zero cost while building. All applicant data is synthetic (D-001), so the free-tier data terms are acceptable.
 - **Trade-offs accepted:** rate limits shape the eval (throttling, runs may span days); results are not comparable to a Claude run.
 - **Revisit if:** quotas block Phase 8, or the learner wants a Claude comparison (bring D-002 back as a new record).
+- **Update 2026-10-18 (fact, not a reversal):** Google's own 429 body states the free-tier limit for `gemini-3.5-flash-lite`: **500 requests per day** per project (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`), half the third-party figure above. It was hit during Phase 8; runs larger than about 450 calls now span quota days (L-014).
 
 ## D-006 · Hosting: self-hosted n8n in Docker Compose
 - **Date:** 2026-10-17 · **Phase:** 0 · **Status:** accepted

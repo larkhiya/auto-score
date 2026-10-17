@@ -40,7 +40,7 @@ function format(forced, rng = r) {
     txt: { mime: 'text/plain', extraction_method: 'plain_text', ext: 'txt' },
     pdf: { mime: 'application/pdf', extraction_method: 'pdf_text', ext: 'pdf' },
     docx: { mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', extraction_method: 'docx', ext: 'docx' },
-    image_pdf: { mime: 'application/pdf', extraction_method: 'none', ext: 'pdf' },
+    image_pdf: { mime: 'application/pdf', extraction_method: 'pdf_text', ext: 'pdf' }, // tried, found no text layer (contract)
   }[f];
   return { format: f, ...meta };
 }
@@ -352,7 +352,6 @@ async function main() {
   if (problems.length) { console.error('Answer-key lint failed:\n' + problems.join('\n')); process.exit(1); }
 
   const applicants = rows.map((x) => {
-    const unreadable = x.trait === 'missing_attachment' || x.trait === 'scanned_pdf_no_text';
     return {
       ref: x.ref, job_id: x.job_id, source: x.source, tier: x.tier, trait: x.trait,
       candidate: { name: x.person.name, email: x.person.email, phone: x.person.phone, location: x.person.location },
@@ -362,7 +361,7 @@ async function main() {
         filename: x.trait === 'missing_attachment' ? null : `cv_${x.ref}.${x.fmt.ext}`,
         mime: x.trait === 'missing_attachment' ? null : x.fmt.mime,
         format: x.trait === 'missing_attachment' ? 'none' : x.fmt.format,
-        extraction_method: unreadable ? 'none' : x.fmt.extraction_method,
+        extraction_method: x.trait === 'missing_attachment' ? 'none' : x.fmt.extraction_method,
         extraction_error: x.trait === 'missing_attachment' ? 'NO_ATTACHMENT' : x.trait === 'scanned_pdf_no_text' ? 'NO_TEXT_LAYER' : null,
       },
       expected: { prefilter: x.expected.prefilter, reason_codes: x.expected.reasons, status_band: x.expected.band },
@@ -392,7 +391,7 @@ async function main() {
     { id: 'email-1', to: 'applications+csr@autoscore.test', from: 'Avery Lindqvist <avery.lindqvist@example.test>', subject: 'Application: Customer Service Representative', body: 'Hello, please find my CV attached. Kind regards, Avery', attachment: 'csr_strong.pdf', expect: { job_id: 'csr', extraction_method: 'pdf_text', status: 'NEEDS_REVIEW', why: 'email applicants have no form answers (MISSING_ANSWER)' } },
     { id: 'email-2', to: 'applications+sdr@autoscore.test', from: 'Riley Novak <riley.novak@example.test>', subject: 'SDR role', body: 'Hi, my CV is attached.', attachment: 'sdr_medium.docx', expect: { job_id: 'sdr', extraction_method: 'docx', status: 'NEEDS_REVIEW', why: 'MISSING_ANSWER' } },
     { id: 'email-3', to: 'applications+csr@autoscore.test', from: 'Casey Moreau <casey.moreau@example.test>', subject: 'Job application', body: 'CV attached as a text file.', attachment: 'csr_medium.txt', expect: { job_id: 'csr', extraction_method: 'plain_text', status: 'NEEDS_REVIEW', why: 'MISSING_ANSWER' } },
-    { id: 'email-4', to: 'applications+csr@autoscore.test', from: 'Jamie Park <jamie.park@example.test>', subject: 'Application', body: 'Scanned CV attached.', attachment: 'scanned_no_text.pdf', expect: { job_id: 'csr', extraction_method: 'none', extraction_error: 'NO_TEXT_LAYER', status: 'NEEDS_REVIEW', why: 'UNREADABLE_CV' } },
+    { id: 'email-4', to: 'applications+csr@autoscore.test', from: 'Jamie Park <jamie.park@example.test>', subject: 'Application', body: 'Scanned CV attached.', attachment: 'scanned_no_text.pdf', expect: { job_id: 'csr', extraction_method: 'pdf_text', extraction_error: 'NO_TEXT_LAYER', status: 'NEEDS_REVIEW', why: 'UNREADABLE_CV' } },
     { id: 'email-5', to: 'applications+sdr@autoscore.test', from: 'Morgan Ito <morgan.ito@example.test>', subject: 'Interested in the SDR job', body: 'I forgot to attach my CV, sorry. I have two years of experience making calls to businesses.', attachment: null, expect: { job_id: 'sdr', extraction_error: 'NO_ATTACHMENT', status: 'NEEDS_REVIEW', why: 'UNREADABLE_CV' } },
     { id: 'email-6', to: 'applications+zzz@autoscore.test', from: 'Taylor Grant <taylor.grant@example.test>', subject: 'Application', body: 'Please consider me for any role.', attachment: 'csr_medium.txt', expect: { job_id: null, status: 'NEEDS_REVIEW', why: 'JOB_NOT_ROUTED (no job "zzz")' } },
   ];

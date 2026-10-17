@@ -14,6 +14,33 @@ Template:
 
 ---
 
+## L-014 · I planned the eval around a quota I'd never checked
+- **Date:** 2026-10-18 · **Phase:** 8 · **Who:** Claude
+- **What happened:** my Phase 8 estimate (about 586 calls "in one day") rested on the third-party "~1,000 requests per day" figure in D-007. The real free-tier limit is 500 per day. It ran out during the failure matrix, after a day that had already used about 450 calls.
+- **Symptom:** in the matrix's rate-limit check, real 429s followed the two injected ones (proxy log `status=429` without `injected`), and the record went to ERROR `LLM_UNAVAILABLE` after 139 s. The 429 body: `GenerateRequestsPerDayPerProjectPerModel-FreeTier`, quotaValue 500, retryDelay 24344 s.
+- **Root cause:** I never read the quota from the authoritative source. The 429 body states it exactly, and the plan said "check AI Studio". I also didn't count the day's calls before starting a run.
+- **Fix:** D-007 updated with the real limit. The run plan is now split across quota days, and the rate-limit check will be re-run on a fresh quota. The pipeline itself behaved correctly: retries, then ERROR + dead letter, then replayed to SHORTLISTED.
+- **Prevention rule:** before any run of more than 20 LLM calls, state the provider's real daily limit and the calls already used that day; plan runs to finish inside one quota day. → Learned Rule added.
+- **Concept it illustrates:** C-29 (rate limits, batching and concurrency)
+
+## L-013 · The test harness froze its own event loop and crashed on a dead socket
+- **Date:** 2026-10-18 · **Phase:** 8 · **Who:** Claude
+- **What happened:** the failure matrix ran child scripts (`replay-dlq.js`, `chaos-run.js`) with `execFileSync`. That blocks Node's event loop for as long as the child runs (about 25 s for a replay). Meanwhile the CRM closed its idle keep-alive connection. The client couldn't notice, reused the dead socket on its next request, and died with a bare `fetch failed`. The matrix also saved its report only at the very end, so the 14 finished checks were lost from the report (kept in the log).
+- **Symptom:** the matrix stopped right after the LLM-outage replay with `fetch failed` and exit 1; no report file.
+- **Root cause:** a synchronous call inside an async program that holds pooled connections, plus an all-or-nothing save.
+- **Fix:** `runScript` now uses async `execFile`; each group runs in its own try/catch; the report is always saved (with a `crashed` field), and errors print their `cause` code. Re-run: dup/job/bias/email 11/11, crm 2/2, no crash.
+- **Prevention rule:** no `*Sync` child processes or sleeps in async harnesses that hold network connections; long runs save results incrementally. No new Learned Rule (specific to harness code); recorded here.
+- **Concept it illustrates:** C-28 (observability: a harness that loses its own evidence)
+
+## L-012 · A regex lost its backslash inside an edit script
+- **Date:** 2026-10-18 · **Phase:** 8 · **Who:** Claude
+- **What happened:** I added `endpoint()` to `src/gemini.js` with a Node edit script, writing the new function as a JS string inside a quoted heredoc. The function's regex `/\/+$/` came out as `//+$/`: one escaping layer (the JS string literal) swallowed the backslash. That turned the regex into a comment, a syntax error.
+- **Symptom:** `npm test`: two test files failed to load with `SyntaxError: Unexpected token '}'` at `src/gemini.js:22`; the test count dropped from 158 to 154.
+- **Root cause:** code written as data. A quoted heredoc protects against the shell (L-003), but the JS string literal inside the script is a second layer with its own escapes. I'd used the scripted-edit habit for a code change where the Edit tool is the right tool.
+- **Fix:** corrected the line with the Edit tool; `npm test` 164/164, `build:check` up to date.
+- **Prevention rule:** change code with Edit/Write; keep scripted edits for data (JSON, CSV) where nothing needs escaping. → Learned Rule L-003 widened.
+- **Concept it illustrates:** —
+
 ## L-011 · An interpreter "fallback" that ran nothing
 - **Date:** 2026-10-18 · **Phase:** 7 · **Who:** Claude
 - **What happened:** to apply four edits to `scripts/generate-applicants.js` I wrote `python3 - <<'EOF' … EOF || node - <<'EOF2' …`, meaning "whichever is installed". The python heredoc was empty, python3 exited 0 having done nothing, so the Node edit script never ran.

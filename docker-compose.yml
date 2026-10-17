@@ -1,4 +1,4 @@
-# Auto-Score stack. Containers reach each other by service name (n8n, crm, greenmail), never localhost.
+# Auto-Score stack. Containers reach each other by service name (n8n, crm, llm-proxy, greenmail), never localhost.
 # Values come from .env (run `npm run init-env` first).
 name: auto-score
 
@@ -47,6 +47,21 @@ services:
       LATENCY_MS: ${LATENCY_MS:-0}
     volumes:
       - crm_data:/app/crm/data
+
+  llm-proxy:
+    # Between WF-12 and Gemini (D-031): forwards every call; faults armed at runtime via /admin/chaos.
+    # Bound to 127.0.0.1 so only this machine can reach the admin endpoint from outside Docker.
+    build:
+      context: .
+      dockerfile: llm-proxy/Dockerfile
+    image: auto-score-llm-proxy:local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8090:8090"
+    environment:
+      LLM_PROXY_PORT: "8090"
+      LLM_UPSTREAM: https://generativelanguage.googleapis.com
+      LLM_PROXY_ADMIN_KEY: ${LLM_PROXY_ADMIN_KEY:?run npm run init-env}
 
   greenmail:
     # Local test mail server (D-011): SMTP 3025, IMAP 3143. Test data only.
