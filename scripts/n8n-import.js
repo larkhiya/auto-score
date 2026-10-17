@@ -44,29 +44,23 @@ async function importFiles(files) {
     }
   }
 
-  // Pass 2: full bodies, then publish state.
-  const results = [];
-  for (const { file, p } of portables) {
-    const id = workflowIdByName[p.name];
-    const { body, published, unresolved } = fromPortable(p, { workflowIdByName, credentialIdByTypeAndName });
-    if (unresolved.length) console.warn(`warning  ${p.name}: unresolved ${unresolved.join(', ')}`);
-    await api.updateWorkflow(id, body);
-    console.log(`updated  ${p.name} (${id})  ← ${path.relative(ROOT, file)}`);
-    results.push({ name: p.name, id, published, deps: dependencies(p) });
+  // n8n 2.x refuses to publish, or even update, a published workflow while a sub-workflow it calls
+  // is unpublished. So work in dependency order: each sub-workflow is updated AND published
+  // before anything that calls it. Workflows to unpublish are handled first, dependents first.
+  const plan = publishOrder(portables.map(({ file, p }) => ({ file, p, name: p.name, id: workflowIdByName[p.name], published: Boolean(p.published), deps: dependencies(p) })));
+  for (const r of plan.filter((x) => !x.published).reverse()) {
+    const current = await api.getWorkflow(r.id);
+    if (current.active) { await api.unpublishWorkflow(r.id); console.log(`unpublished ${r.name}`); }
   }
-
-  // Pass 3: publish state. n8n 2.x refuses to publish a workflow whose sub-workflows aren't
-  // published, so publish dependencies first (and unpublish dependents first).
-  for (const r of publishOrder(results)) {
-    if (r.published) {
-      await api.publishWorkflow(r.id);
-      console.log(`published ${r.name}`);
-    } else {
-      const current = await api.getWorkflow(r.id);
-      if (current.active) { await api.unpublishWorkflow(r.id); console.log(`unpublished ${r.name}`); }
-    }
+  for (const r of plan) {
+    const { body, unresolved } = fromPortable(r.p, { workflowIdByName, credentialIdByTypeAndName });
+    if (unresolved.length) console.warn(`warning  ${r.name}: unresolved ${unresolved.join(', ')}`);
+    await api.updateWorkflow(r.id, body);
+    let note = '';
+    if (r.published) { await api.publishWorkflow(r.id); note = ' · published'; }
+    console.log(`updated  ${r.name} (${r.id})${note}  ← ${path.relative(ROOT, r.file)}`);
   }
-  return results;
+  return plan.map(({ name, id, published }) => ({ name, id, published }));
 }
 
 // Names of workflows this one calls (Execute Workflow nodes) or uses as its error workflow.
@@ -84,7 +78,7 @@ function dependencies(p) {
   return [...refs];
 }
 
-// Dependencies before dependents (published ones); the reverse for ones being unpublished.
+// Topological order: every workflow comes after the workflows it calls.
 function publishOrder(results) {
   const byName = Object.fromEntries(results.map((r) => [r.name, r]));
   const ordered = [];
@@ -96,7 +90,7 @@ function publishOrder(results) {
     ordered.push(r);
   };
   results.forEach(visit);
-  return [...ordered.filter((r) => r.published), ...ordered.filter((r) => !r.published).reverse()];
+  return ordered;
 }
 
 if (require.main === module) {

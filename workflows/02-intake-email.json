@@ -1,0 +1,98 @@
+{
+  "connections": {
+    "New email (IMAP)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "One email at a time (WF-03)",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "One email at a time (WF-03)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Email outcomes",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "name": "WF-02 Intake email",
+  "nodes": [
+    {
+      "id": "f436ada4-f443-46ac-ac66-23df2d5e719f",
+      "name": "Email outcomes",
+      "parameters": {
+        "jsCode": "// Records in = records out: one line per email, success or failure.\nconst items = $input.all();\nconst outcomes = items.map((it) => (it.json.error\n  ? { status: 'FAILED', error: String(it.json.error.message || it.json.error).slice(0, 300) }\n  : { status: it.json.outcome || 'UNKNOWN', application_id: it.json.application_id || null }));\nreturn [{ json: { emails: items.length, failed: outcomes.filter((o) => o.status === 'FAILED').length, outcomes } }];",
+        "mode": "runOnceForAllItems"
+      },
+      "position": [
+        480,
+        300
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "imap": {
+          "name": "GreenMail IMAP (test)"
+        }
+      },
+      "id": "cd8e0cce-5b6a-43ae-8705-4cbc85369d87",
+      "name": "New email (IMAP)",
+      "notes": "Polls the test mailbox (GreenMail now, Gmail later: D-011). Marks mail read.",
+      "notesInFlow": true,
+      "parameters": {
+        "dataPropertyAttachmentsPrefixName": "attachment_",
+        "format": "resolved",
+        "mailbox": "INBOX",
+        "options": {
+          "customEmailConfig": "[\"UNSEEN\"]",
+          "trackLastMessageId": true
+        },
+        "postProcessAction": "read"
+      },
+      "position": [
+        0,
+        300
+      ],
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2.2
+    },
+    {
+      "id": "36a6caa7-7cd7-4231-94bd-9df72683ba4a",
+      "name": "One email at a time (WF-03)",
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        },
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "cachedResultName": "WF-03 Email to application",
+          "mode": "list",
+          "value": "@name:WF-03 Email to application"
+        }
+      },
+      "position": [
+        240,
+        300
+      ],
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4
+    }
+  ],
+  "published": true,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

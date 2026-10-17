@@ -2,8 +2,9 @@
 **Current phase:** 3 (Phases 4 and 5 have their pure code done) · **Target finish:** straight-through build (D-008) · **Pace:** continuous; lessons deferred to a review pass
 
 ## Now / Next / Blocked
-- **Now:** reseed the CRM with the corrected dataset (D-022), then Phase 3 intake workflows (WF-01, WF-02, WF-10 stub)
-- **Next:** wire the Phase 4 pre-filter into WF-10; Phase 5 LLM calls
+- **Now:** WF-10 full pipeline: load the approved profile → pre-filter → (Phase 5) redact → LLM extract → LLM score → evidence → scoring → write-back
+- **Next:** the learner creates the n8n Gemini credential; then the 5-per-role smoke run
+- **Note:** CRM reset under D-022 at 2026-10-17 (dedupe proof); 222 reseeded
 - **Blocked:** nothing (both keys in `.env`; CRM resets approved, D-022)
 
 ## Phases
@@ -11,10 +12,10 @@
 |---|---|---|---|---|---|
 | 0 | Orientation and setup | ✅* | 2026-10-17 | 2026-10-17 | phase-0 |
 | 1 | Contracts and job profiles | ✅* | 2026-10-17 | 2026-10-17 | phase-1 |
-| 2 | Mock CRM and synthetic applicants | 🟨 reseed pending | 2026-10-17 | | |
-| 3 | Triggers and intake | ⬜ | straight-through | | |
-| 4 | Boolean pre-filter | ⬜ | straight-through | | |
-| 5 | AI screening and scoring | ⬜ | straight-through | | |
+| 2 | Mock CRM and synthetic applicants | ✅* | 2026-10-17 | 2026-10-17 | phase-2 |
+| 3 | Triggers and intake | ✅* | 2026-10-17 | 2026-10-17 | phase-3 |
+| 4 | Boolean pre-filter | 🟨 code done (222/222 offline); wiring into WF-10 next | straight-through | | |
+| 5 | AI screening and scoring | 🟨 deterministic parts done; LLM calls next | straight-through | | |
 | 6 | CRM write-back and error handling | ⬜ | straight-through | | |
 | 7 | Add any role from a job description | ⬜ | straight-through | | |
 | 8 | Prove it works every time | ⬜ | straight-through | | |
@@ -40,7 +41,14 @@ Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items m
 - [x] CRM in Compose; n8n reaches it by service name (`wget http://crm:3000/health` from the n8n container → `{"ok":true}`)
 - [x] Tests prove illegal transitions are rejected for candidates and job profiles (`tests/crm-state.test.js`, `tests/crm-api.test.js`)
 - [x] Answer key exists (`data/ground_truth.csv`, 222 rows); Claude spot-checked 10 rows; learner spot-check deferred
-- [~] CRM page shows 222 NEW candidates filterable by job (verified with the first dataset; reseed with the corrected dataset pending reset approval)
+- [x] CRM page shows 222 NEW candidates filterable by job (corrected dataset reseeded under D-022)
+
+**Phase 3**
+- [x] One CRM application (`app_000226`, WF-01 exec 22 → WF-10 exec 23) and email applications (WF-03) reach WF-10 as schema-valid ApplicationReceived of one shape, with the right job_id (csr, sdr, null for an unknown plus-address)
+- [x] Same webhook twice → one claim (exec 23 CLAIMED, exec 26 DUPLICATE_SKIPPED); same email twice → one record, one claim (execs 85/87, concurrent)
+- [x] Wrong webhook secret → 403
+- [x] All 6 email types: PDF (`pdf_text`), DOCX (`docx`), TXT, scanned PDF (`NO_TEXT_LAYER`), no attachment (`NO_ATTACHMENT`), unknown job (`job_id: null`)
+- [x] Normalize, retry and extract unit tests pass (136 total)
 
 ## Learner review pass (D-008), collected as we go
 - Concepts deferred: see LEARNING (`⏭`)

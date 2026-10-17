@@ -12,6 +12,29 @@ Under D-008, Claude makes design choices during the straight-through build and m
 
 ---
 
+## D-024 · One CRM-call sub-workflow (WF-11) owns the retry policy
+- **Date:** 2026-10-17 · **Phase:** 3 · **Status:** pending learner review
+- **Decided by:** Claude (D-008)
+- **Context:** the brief requires exponential backoff on 429, 5xx and timeouts and never on other 4xx. n8n's built-in "Retry on fail" waits a fixed time and retries every error, including 422s that can never succeed.
+- **Options:** A: built-in retry on every HTTP node (+ no work; − wrong policy) · B: a reusable sub-workflow: HTTP with "never error" → classify (`src/retry.js`) → Wait with backoff → loop (+ correct policy, tested once, used everywhere; − extra executions in the log) · C: a Code node doing HTTP itself (− not reliably available in the task-runner sandbox)
+- **Decision:** B. WF-11 takes `{request, context}` and returns `{ok, status, body, error_code, attempts, history, context}`. There are two request nodes (with or without a body), because `sendBody` must be static (L-004).
+- **Revisit if:** n8n gains configurable backoff and status filters on its built-in retry.
+
+## D-023 · Email intake: CRM record without webhook, one execution per email, dedupe by Message-ID
+- **Date:** 2026-10-17 · **Phase:** 3 · **Status:** pending learner review
+- **Decided by:** Claude (D-008), answering brief Phase 3 step 4
+- **Context:** creating the CRM record for an email would fire the CRM webhook, so the same applicant could be screened twice (once by the email path, once by WF-01).
+- **Options:** A: create with `notify=false` and screen directly from the email path (+ one path, no race; − the email path also calls WF-10) · B: create with webhook on and let WF-01 do all screening (+ one entry point; − email-specific context such as the extraction result must survive through the CRM)
+- **Decision:** A, with dedupe as a backstop.
+  - WF-03 creates the record with `notify=false` and `source_ref = Message-ID` (the CRM returns the existing record for a repeated Message-ID, or for the same job + email + CV).
+  - WF-03 then calls WF-10, whose compare-and-set claim lets exactly one run proceed (verified: two identical emails processed concurrently, executions 85/87, one CLAIMED and one DUPLICATE_SKIPPED).
+  - WF-02 is only the IMAP trigger. Each email runs in its own WF-03 execution with errors captured, so one bad email can't stop the batch (found when a single failure blocked five emails).
+  - Plus-address routing: `applications+<job>@…`. Unknown job → `job_id: null` → NEEDS_REVIEW.
+  - DOCX via unzip + `src/extract.js` (n8n's Extract From File has no DOCX).
+  - Scanned PDFs → `NO_TEXT_LAYER`, review (no OCR).
+- **Trade-offs accepted:** the IMAP node marks mail read when it fetches it, so an email whose processing fails isn't fetched again. Phase 6's error workflow must dead-letter the email payload so it can be replayed.
+- **Revisit if:** moving to Gmail (D-011) changes how the plus-address appears (`Delivered-To` vs `To`).
+
 ## D-022 · Standing approval to reset the CRM's synthetic candidates during the build
 - **Date:** 2026-10-17 · **Phase:** 2 · **Status:** accepted
 - **Decided by:** learner

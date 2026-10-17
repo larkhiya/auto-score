@@ -11,7 +11,25 @@
         ]
       ]
     },
-    "Call CRM": {
+    "Call CRM (no body)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Decide",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Decide",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Call CRM (with body)": {
       "main": [
         [
           {
@@ -40,6 +58,24 @@
         ]
       ]
     },
+    "Has body?": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Call CRM (with body)",
+            "type": "main"
+          }
+        ],
+        [
+          {
+            "index": 0,
+            "node": "Call CRM (no body)",
+            "type": "main"
+          }
+        ]
+      ]
+    },
     "Next attempt": {
       "main": [
         [
@@ -56,7 +92,7 @@
         [
           {
             "index": 0,
-            "node": "Call CRM",
+            "node": "Has body?",
             "type": "main"
           }
         ]
@@ -103,7 +139,7 @@
         "unit": "seconds"
       },
       "position": [
-        1340,
+        1560,
         140
       ],
       "type": "n8n-nodes-base.wait",
@@ -116,8 +152,43 @@
           "name": "CRM API key"
         }
       },
-      "id": "7061df19-9e86-4b98-9070-ad821677c5d7",
-      "name": "Call CRM",
+      "id": "cdc8a3db-6de0-4221-86ee-ddaf11be529d",
+      "name": "Call CRM (no body)",
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "jsonHeaders": "={{ $json.headers_json }}",
+        "method": "={{ $json.request.method }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "url": "={{ $json.url }}"
+      },
+      "position": [
+        660,
+        400
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5
+    },
+    {
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "CRM API key"
+        }
+      },
+      "id": "14d3e6f3-80fd-47be-bfe3-c1221173fe58",
+      "name": "Call CRM (with body)",
       "onError": "continueErrorOutput",
       "parameters": {
         "authentication": "genericCredentialType",
@@ -143,8 +214,8 @@
         "url": "={{ $json.url }}"
       },
       "position": [
-        440,
-        300
+        660,
+        200
       ],
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5
@@ -157,11 +228,46 @@
         "mode": "runOnceForEachItem"
       },
       "position": [
-        680,
+        900,
         300
       ],
       "type": "n8n-nodes-base.code",
       "typeVersion": 2
+    },
+    {
+      "id": "e147fddc-b1bd-4e97-8171-2ae92888cd64",
+      "name": "Has body?",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "1f3ce876-0cab-42c0-a12a-c58a0dba3f59",
+              "leftValue": "={{ $json.has_body }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": ""
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "looseTypeValidation": false,
+        "options": {}
+      },
+      "position": [
+        440,
+        300
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
     },
     {
       "id": "fb2962be-e305-4287-8144-6421d8d40e1a",
@@ -171,7 +277,7 @@
         "mode": "runOnceForEachItem"
       },
       "position": [
-        1120,
+        1340,
         140
       ],
       "type": "n8n-nodes-base.code",
@@ -199,8 +305,8 @@
         "mode": "runOnceForEachItem"
       },
       "position": [
-        1120,
-        400
+        1340,
+        420
       ],
       "type": "n8n-nodes-base.code",
       "typeVersion": 2
@@ -213,7 +319,7 @@
           "combinator": "and",
           "conditions": [
             {
-              "id": "4e4a2736-e2be-43ef-9fbc-bb1ccae70c22",
+              "id": "d536816b-5e89-46a7-bcd6-3f11396d316f",
               "leftValue": "={{ $json.step.decision }}",
               "operator": {
                 "operation": "equals",
@@ -233,7 +339,7 @@
         "options": {}
       },
       "position": [
-        900,
+        1120,
         300
       ],
       "type": "n8n-nodes-base.if",

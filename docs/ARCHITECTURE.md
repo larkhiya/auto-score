@@ -16,7 +16,7 @@ flowchart LR
     B["WF-02 · IMAP trigger<br/>GreenMail now, Gmail later (D-011)"]
   end
 
-  B --> X["Parse email · job from plus-address<br/>extract CV text · create CRM record<br/>(webhook suppressed)"]
+  B --> X["WF-03 per email: parse · job from plus-address<br/>extract CV text (PDF/TXT/DOCX) · create CRM record<br/>(webhook suppressed, Message-ID dedupe)"]
   A --> N["normalize → ApplicationReceived"]
   X --> N
   N --> V{"Schema valid?<br/>idempotency_key new?"}
@@ -45,8 +45,10 @@ flowchart LR
 | ID | Component | Where | Notes |
 |---|---|---|---|
 | WF-00 | Hello items | `workflows/00-hello.json` | Phase 0 teaching workflow |
-| WF-01 | Intake: CRM webhook | `workflows/01-intake-webhook.json` | shared-secret header; responds 202 at once, processes after |
-| WF-02 | Intake: email (IMAP) | `workflows/02-intake-email.json` | GreenMail now; job from `applications+<job>@…`; CV text extraction |
+| WF-01 | Intake: CRM webhook | `workflows/01-intake-webhook.json` | header-auth webhook (403 on a wrong secret); responds 202 at once; normalizes; calls WF-10 |
+| WF-02 | Intake: email trigger | `workflows/02-intake-email.json` | IMAP trigger (GreenMail now, Gmail later); one WF-03 execution per email, failures captured per email (D-023) |
+| WF-03 | One email → application | `workflows/03-email-to-application.json` | parse sender and plus-address → extract PDF/TXT/DOCX text → create CRM record (no webhook, Message-ID dedupe) → normalize → WF-10 |
+| WF-11 | CRM call with retry policy | `workflows/11-crm-request.json` | every CRM call goes through here: backoff on 429/5xx/timeouts, never on other 4xx (D-024) |
 | WF-05 | Job profile builder | `workflows/05-job-profile-builder.json` | JD → LLM draft → checks → DRAFT |
 | WF-10 | Screening pipeline | `workflows/10-screening.json` | sub-workflow: validate → dedupe → profile → pre-filter → AI → score → write-back |
 | WF-90 | Error handler | `workflows/90-error-handler.json` | Error Trigger → ERROR, dead-letter, notify |

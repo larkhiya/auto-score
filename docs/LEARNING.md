@@ -13,9 +13,9 @@ Under D-008 (straight-through build), each phase's concepts are marked ⏭ when 
 | C-06 | Configuration vs code | 1 | changing the thermostat vs rewiring the furnace | ⏭ | |
 | C-07 | APIs, auth and webhooks from the integrator's side | 2 | a building badge; "call me back when it's ready" | ⏭ | |
 | C-08 | Test data and ground truth | 2 | the teacher's answer key, written before grading | ⏭ | |
-| C-09 | Normalization / the adapter pattern | 3 | a travel adapter: many plugs, one socket | ⬜ | |
-| C-10 | Idempotency and deduplication | 3 | an elevator button | ⬜ | |
-| C-11 | Binary data and text extraction | 3 | a photocopy of a letter vs the typed letter | ⬜ | |
+| C-09 | Normalization / the adapter pattern | 3 | a travel adapter: many plugs, one socket | ⏭ | |
+| C-10 | Idempotency and deduplication | 3 | an elevator button | ⏭ | |
+| C-11 | Binary data and text extraction | 3 | a photocopy of a letter vs the typed letter | ⏭ | |
 | C-12 | Boolean logic and gating | 4 | the bouncer before the interview panel; `&&` short-circuit | ⬜ | |
 | C-13 | Deterministic vs probabilistic steps | 4 | a calculator vs a talented intern | ⬜ | |
 | C-14 | Reason codes and explainability | 4 | a rejection letter that says why | ⬜ | |
@@ -40,6 +40,14 @@ Under D-008 (straight-through build), each phase's concepts are marked ⏭ when 
 | C-33 | AI-drafted config with human approval, then frozen | 7 | a junior drafts the contract, a manager signs it, nobody edits the signed copy | ⬜ | |
 
 ## Concept break notes (newest first)
+### C-03 (in depth), C-09, C-10, C-11 · 2026-10-17 (Phase 3)
+- Deferred under D-008. Review-pass pointers:
+  - C-03: WF-01 is a webhook (the CRM pushes, n8n answers 202 at once); WF-02 is IMAP (n8n pulls). Both are at-least-once. Question: what in WF-10 makes a second delivery harmless?
+  - C-09: `src/normalize.js` `fromCrmRecord` is used by BOTH WF-01 and WF-03. See `tests/normalize.test.js` "two entry points, one shape".
+  - C-10: the claim in WF-10 ("Build claim" node): `X-Expected-Status: NEW` (compare-and-set) + `Idempotency-Key`. Evidence: two identical emails ran concurrently (executions 85/87) and exactly one claimed.
+  - C-11: WF-03's branches. A scanned PDF has no text layer (`NO_TEXT_LAYER`); a DOCX is a zip (relabelled, unzipped, `src/extract.js`).
+  - Bonus, the most instructive bug so far: L-004 (look at what was actually sent before theorising).
+
 ### C-07, C-08, C-22 · 2026-10-17 (Phase 2)
 - Deferred under D-008. Review-pass pointers:
   - C-07: `crm/README.md` (`x-api-key` on every call; webhooks carry `x-webhook-secret`; "call me back" = `application.created`).
