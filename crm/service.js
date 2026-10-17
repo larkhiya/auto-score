@@ -65,6 +65,7 @@ function createService(db, { onEvent = () => {} } = {}) {
       const versions = all('SELECT version, status, approved_at, approved_by FROM job_versions WHERE job_id = ? ORDER BY version', j.job_id);
       return {
         job_id: j.job_id, title: j.title, drafting: Boolean(j.drafting), created_at: j.created_at,
+        draft_error: j.draft_error ? P(j.draft_error) : null,
         current_version: (versions.find((v) => v.status === 'approved') || {}).version || null,
         draft_version: (versions.find((v) => v.status === 'draft') || {}).version || null,
         versions,
@@ -103,6 +104,24 @@ function createService(db, { onEvent = () => {} } = {}) {
     return listJobs().find((j) => j.job_id === job_id);
   }
 
+  // Ask WF-05 for a fresh AI draft from the job's stored JD (replaces any current draft).
+  function requestRedraft(job_id) {
+    const job = requireJob(job_id);
+    if (!job.jd_text) throw new HttpError(422, 'NO_JD', `job "${job_id}" has no job description to draft from`);
+    run('UPDATE jobs SET drafting = 1, draft_error = NULL WHERE job_id = ?', job_id);
+    onEvent('job.draft_requested', { job: { job_id, title: job.title, jd_text: job.jd_text } });
+    return listJobs().find((j) => j.job_id === job_id);
+  }
+
+  // WF-05 couldn't produce a contract-valid draft even after its repair retry: say so on the job,
+  // never silently (brief §5.5). The recruiter can edit the JD or re-draft.
+  function recordDraftFailure(job_id, { errors = [], prompt_version = null, model = null } = {}) {
+    requireJob(job_id);
+    const detail = { at: now(), prompt_version, model, errors: errors.slice(0, 20).map(String) };
+    run('UPDATE jobs SET drafting = 0, draft_error = ? WHERE job_id = ?', JSON.stringify(detail), job_id);
+    return listJobs().find((j) => j.job_id === job_id);
+  }
+
   // Saves (or replaces) the job's single draft version. Used by WF-05 and by human edits.
   function saveDraft(job_id, incoming, { builderErrors = [] } = {}) {
     const job = requireJob(job_id);
@@ -125,7 +144,7 @@ function createService(db, { onEvent = () => {} } = {}) {
         run("INSERT INTO job_versions (job_id, version, status, profile_json, check_errors_json, created_at) VALUES (?, ?, 'draft', ?, ?, ?)",
           job_id, profile.version, JSON.stringify(profile), JSON.stringify(errors), profile.created_at);
       }
-      run('UPDATE jobs SET drafting = 0, title = ? WHERE job_id = ?', profile.title, job_id);
+      run('UPDATE jobs SET drafting = 0, draft_error = NULL, title = ? WHERE job_id = ?', profile.title, job_id);
     });
     return { profile, check_errors: errors };
   }
@@ -366,7 +385,7 @@ function createService(db, { onEvent = () => {} } = {}) {
   }
 
   return {
-    seedJobs, listJobs, getApprovedProfile, getVersion, getDraft, createJob, saveDraft, editDraft, resolveBiasFlag, approveDraft,
+    seedJobs, listJobs, getApprovedProfile, getVersion, getDraft, createJob, requestRedraft, recordDraftFailure, saveDraft, editDraft, resolveBiasFlag, approveDraft,
     createApplication, getCandidate, listCandidates, patchCandidate,
     addDeadLetter, listDeadLetters, markReplayed, addRunLog, listRunLogs, stats, resetCandidates,
     allowedHumanActions: (status) => state.allowedNext(status, state.ACTORS.HUMAN),

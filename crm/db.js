@@ -90,6 +90,9 @@ function open(path = ':memory:') {
   const db = new DatabaseSync(path);
   db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
   db.exec(SCHEMA);
+  // Migrations for columns added after a database was created (CREATE TABLE IF NOT EXISTS won't add them).
+  const jobCols = db.prepare('PRAGMA table_info(jobs)').all().map((c) => c.name);
+  if (!jobCols.includes('draft_error')) db.exec('ALTER TABLE jobs ADD COLUMN draft_error TEXT');
   return db;
 }
 

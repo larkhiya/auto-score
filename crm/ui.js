@@ -149,7 +149,17 @@ ${withQuotes ? `<td>${c.jd_quote ? `“${h(c.jd_quote)}”` : '<span class="err"
 <p class="muted">Thresholds: shortlist ≥ ${p.thresholds.shortlist}, maybe ≥ ${p.thresholds.maybe}, review below confidence ${p.thresholds.min_confidence}</p>
 <details><summary>Pre-filter rules</summary><pre>${h(JSON.stringify(p.prefilter, null, 2))}</pre></details>`;
 
-    let draftHtml = job.drafting ? '<p>The AI is drafting a profile from the job description…</p>' : '<p class="muted">No draft. Editing the approved profile below creates a new draft version; the approved one never changes.</p>';
+    // Must-haves next to the JD sentence they came from, so a reviewer can judge each rule.
+    const leafList = (n, out = []) => { if (!n) return out; if (n.all || n.any) (n.all || n.any).forEach((x) => leafList(x, out)); else if (n.not) leafList(n.not, out); else out.push(n); return out; };
+    const mustHavesTable = (p) => `<div class="scroll"><table><tr><th>Rule</th><th>Fails with</th><th>From the JD</th></tr>
+${leafList(p.prefilter).map((l) => `<tr><td><code>${h(l.check)}</code> ${h(l.field || '')} ${l.terms ? h(l.terms.join(', ')) : ''} ${l.value !== undefined ? '= ' + h(l.value) : ''}</td>
+<td><code>${h(l.reason || '-')}</code></td><td>${l.jd_quote ? `“${h(l.jd_quote)}”` : '<span class="muted">system check</span>'}</td></tr>`).join('')}</table></div>`;
+
+    const failure = job.draft_error ? `<div class="flag"><b>The AI draft failed</b> (${h(job.draft_error.prompt_version)}, ${h(job.draft_error.model)}, ${h(job.draft_error.at)}): nothing was saved.<ul>${job.draft_error.errors.map((e) => `<li>${h(e)}</li>`).join('')}</ul></div>` : '';
+    const redraft = `<form method="post" action="/ui/jobs/${h(job.job_id)}/redraft" class="inline"><button class="secondary" ${job.drafting ? 'disabled' : ''}>Re-draft with AI</button></form>`;
+    let draftHtml = job.drafting
+      ? '<p>The AI is drafting a profile from the job description… refresh in a moment.</p>'
+      : `${failure}<p class="muted">No draft. Editing the approved profile below creates a new draft version; the approved one never changes.</p>${job.versions.length === 0 || job.draft_error ? redraft : ''}`;
     if (draft) {
       const openFlags = draft.profile.bias_flags.filter((f) => !f.resolved);
       const blocked = draft.check_errors.length > 0 || openFlags.length > 0;
@@ -158,6 +168,9 @@ ${draft.check_errors.length ? `<div class="flag"><b>Check errors (fix before app
 <h3>Bias flags</h3>${draft.profile.bias_flags.length ? draft.profile.bias_flags.map((f) => `<div class="flag ${f.resolved ? 'resolved' : ''}"><b>${h(f.category)}</b>: “${h(f.phrase)}” in <code>${h(f.target)}</code>. ${h(f.message)}
 ${f.resolved ? `<br><span class="msg">Resolved: ${h(f.resolution_note)}</span>` : `<form method="post" action="/ui/jobs/${h(job.job_id)}/flags/${h(f.id)}" class="row"><input name="note" required minlength="5" placeholder="How was this resolved? (e.g. removed the criterion)" style="flex:1"><button class="secondary">Mark resolved</button></form>`}</div>`).join('') : '<p class="muted">No bias flags.</p>'}
 <h3>Criteria</h3>${criteriaTable(draft.profile, true)}
+<h3>Must-haves (pre-filter)</h3>${mustHavesTable(draft.profile)}
+${draft.profile.source_jd_text ? `<details><summary>Job description it was drafted from</summary><pre>${h(draft.profile.source_jd_text)}</pre></details>` : ''}
+<p>${redraft} <span class="muted">replaces this draft with a new AI draft</span></p>
 <h3>Edit draft (JSON)</h3><form method="post" action="/ui/jobs/${h(job.job_id)}/draft"><textarea name="json" rows="18">${h(JSON.stringify({ title: draft.profile.title, prefilter: draft.profile.prefilter, criteria: draft.profile.criteria, nice_to_haves: draft.profile.nice_to_haves, thresholds: draft.profile.thresholds }, null, 2))}</textarea>
 <p><button class="secondary">Save draft</button></p></form>
 <h3>Approve</h3><form method="post" action="/ui/jobs/${h(job.job_id)}/approve" class="row"><label>Approved by<br><input name="approved_by" required></label>
@@ -182,6 +195,10 @@ ${!draft && approved ? `<form method="post" action="/ui/jobs/${h(job.job_id)}/dr
   r.post('/jobs/:id/flags/:flag', (req, res) => {
     const url = `/ui/jobs/${encodeURIComponent(req.params.id)}`;
     try { service.resolveBiasFlag(req.params.id, req.params.flag, req.body.note); back(res, url, { msg: 'Flag resolved.' }); } catch (e) { back(res, url, { err: `${e.code}: ${e.message}` }); }
+  });
+  r.post('/jobs/:id/redraft', (req, res) => {
+    const url = `/ui/jobs/${encodeURIComponent(req.params.id)}`;
+    try { service.requestRedraft(req.params.id); back(res, url, { msg: 'Asked the AI for a new draft; refresh in a moment.' }); } catch (e) { back(res, url, { err: `${e.code}: ${e.message}` }); }
   });
   r.post('/jobs/:id/approve', (req, res) => {
     const url = `/ui/jobs/${encodeURIComponent(req.params.id)}`;

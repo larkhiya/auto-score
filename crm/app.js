@@ -68,6 +68,8 @@ function createApp({ service, apiKey, chaos = { fail_rate: 0, latency_ms: 0, fai
   }));
   api.patch('/jobs/:id/draft', wrap((req, res) => res.json(service.editDraft(req.params.id, req.body))));
   api.post('/jobs/:id/approve', wrap((req, res) => res.json(service.approveDraft(req.params.id, req.body.approved_by))));
+  api.post('/jobs/:id/redraft', wrap((req, res) => res.status(202).json(service.requestRedraft(req.params.id))));
+  api.post('/jobs/:id/draft-failed', wrap((req, res) => res.json(service.recordDraftFailure(req.params.id, req.body))));
 
   // Candidates
   api.post('/applications', wrap((req, res) => {

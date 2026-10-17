@@ -247,3 +247,20 @@ test('reset needs the exact confirm phrase', async () => {
   assert.equal(refused.status, 422);
   assert.equal(refused.body.error.code, 'CONFIRM_REQUIRED');
 });
+
+test('re-draft asks WF-05 again; a failed draft is recorded on the job, never silent', async () => {
+  const before = hooks.length;
+  const jd = 'We are hiring a Bookkeeper to reconcile accounts, run payroll and prepare monthly reports for the finance team. '.repeat(2);
+  await api('POST', '/jobs', { job_id: 'books', title: 'Bookkeeper', jd_text: jd });
+  const failed = await api('POST', '/jobs/books/draft-failed', { errors: ['contract /criteria: must NOT have fewer than 4 items'], prompt_version: 'job_profile_builder_v1', model: 'm' });
+  assert.equal(failed.body.drafting, false);
+  assert.match(failed.body.draft_error.errors[0], /fewer than 4/);
+  const re = await api('POST', '/jobs/books/redraft');
+  assert.equal(re.status, 202);
+  assert.equal(re.body.drafting, true);
+  assert.equal(re.body.draft_error, null);
+  await sender.idle();
+  assert.equal(hooks.slice(before).filter((h) => h.body.event === 'job.draft_requested').length, 2);
+  const page = await fetch(`${base}/ui/jobs/books`);
+  assert.match(await page.text(), /drafting a profile/);
+});

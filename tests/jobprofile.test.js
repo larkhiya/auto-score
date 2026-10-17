@@ -56,6 +56,8 @@ test('an approved profile cannot carry unresolved bias flags', () => {
 test('AI-drafted criteria must quote the JD, and the quote must really be there', () => {
   const p = clone(load('csr.v1.json'));
   Object.assign(p, { status: 'draft', created_by: 'llm_draft', source_jd_text: 'You will answer customer emails and resolve billing problems.' });
+  // Only system checks in the pre-filter, so this test isolates CRITERION quotes (must-have quotes: builder.test.js).
+  p.prefilter = { all: [{ check: 'cv_text_min_chars', value: 300, reason: 'CV_TOO_SHORT' }, { not: { check: 'duplicate' }, reason: 'DUPLICATE_APPLICATION' }] };
   p.criteria.forEach((c) => (c.jd_quote = 'answer customer emails'));
   assert.ok(checkProfile(p).ok);
 

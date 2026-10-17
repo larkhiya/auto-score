@@ -14,6 +14,24 @@ Template:
 
 ---
 
+## L-010 · The AI chain ignored its output parser
+- **Date:** 2026-10-18 · **Phase:** 7 · **Who:** Claude
+- **What happened:** WF-05's first two drafts both failed with "no output". The LLM Chain returned raw text (`{"text": "```json…"}`), and the model never saw the schema's format instructions, so it invented field names (`job_title`, `id`).
+- **Symptom:** draft_error "the reply did not match the required JSON format: no output" on both jobs, even though Gemini answered.
+- **Root cause:** in chainLlm 1.9 a connected Structured Output Parser is used only when the `hasOutputParser` switch ("Require Specific Output Format") is true, and it defaults to false. My node-info tool printed the parameter's `hide` condition as `show=…`, so I misread "hidden for v1, 1.1, 1.3" as "only for those versions" and left it out.
+- **Fix:** `hasOutputParser: true` in WF-05. `scripts/n8n-node-info.js` now labels `show=` vs `HIDE=`. Found by reading the execution's real node outputs (L-004) and then the node source.
+- **Prevention rule:** covered by L-004 (inspect execution data first). The tool fix removes the misleading output; no new rule.
+- **Concept it illustrates:** C-16 (structured output: the format has to reach the model)
+
+## L-009 · `npm test` silently made live LLM calls
+- **Date:** 2026-10-18 · **Phase:** 7 · **Who:** Claude
+- **What happened:** `scripts/injection-test.js` (the live prompt-injection check, 12 Gemini calls) matched Node's default test pattern `**/*-test.js`. Every `npm test` since Phase 5 (about 4 runs) also ran it: about 48 unintended LLM calls, and 30 s per test run. Unit tests must never touch a paid or rate-limited service.
+- **Symptom:** in Phase 7 a full run listed `✖ scripts\injection-test.js (31216 ms)` among the failures. Earlier it had passed silently and was counted as one "test".
+- **Root cause:** `npm test` was `node --test` with default discovery, which scans the whole repo; I named a script after what it does without checking the runner's patterns. I also didn't notice the test-time jump from about 3 s to about 30 s.
+- **Fix:** renamed the script to `scripts/injection-check.js` (`npm run check:injection`). `npm test` now runs only `tests/**/*.test.js`. Verified: 156 tests in 2.6 s, no network.
+- **Prevention rule:** scope the test runner explicitly; never name a live script `*-test.js` / `test-*.js`. → promoted to Learned Rules: yes
+- **Concept it illustrates:** C-26 (testing pyramid: unit tests are fast, offline and deterministic)
+
 ## L-008 · The failure-injection harness reported a record as LOST that wasn't
 - **Date:** 2026-10-17 · **Phase:** 6 · **Who:** Claude
 - **What happened:** the first `chaos-run.js` (2 records, CRM failing 100%) reported "records in 2 = out 1, LOST: csr-027". csr-027 actually finished as MAYBE seven seconds after the harness reported.

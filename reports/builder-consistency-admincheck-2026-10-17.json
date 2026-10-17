@@ -1,0 +1,306 @@
+{
+  "at": "2026-10-17T16:13:32.289Z",
+  "job_id": "admincheck",
+  "jd": "data/jobs/admin_assistant.md",
+  "runs": 3,
+  "succeeded": 3,
+  "comparisons": [
+    {
+      "runs": [
+        1,
+        2
+      ],
+      "criteria_counts": [
+        5,
+        5
+      ],
+      "criteria_matched": "3/5",
+      "mean_weight_diff_matched": 1.7,
+      "must_have_overlap": 0.5,
+      "pairs": [
+        {
+          "a": "Calendar and Meeting Management",
+          "b": "Calendar, Meeting, and Travel Management",
+          "similarity": 0.35,
+          "weight_diff": 0
+        },
+        {
+          "a": "Office Software and Spreadsheets",
+          "b": "Office Software and Excel Proficiency",
+          "similarity": 0.55,
+          "weight_diff": 5
+        },
+        {
+          "a": "Financial Admin and Record Keeping",
+          "b": "Financial and Records Administration",
+          "similarity": 0.46,
+          "weight_diff": 0
+        },
+        {
+          "a": "Communication and Enquiry Handling",
+          "b": "Minute Taking and Communication",
+          "similarity": 0.1,
+          "weight_diff": 5
+        },
+        {
+          "a": "Office Coordination and Supplies Management",
+          "b": "Administrative and Office Experience",
+          "similarity": 0.08,
+          "weight_diff": 10
+        }
+      ]
+    },
+    {
+      "runs": [
+        1,
+        3
+      ],
+      "criteria_counts": [
+        5,
+        6
+      ],
+      "criteria_matched": "4/5",
+      "mean_weight_diff_matched": 2.5,
+      "must_have_overlap": 0.5,
+      "pairs": [
+        {
+          "a": "Calendar and Meeting Management",
+          "b": "Calendar and Travel Management",
+          "similarity": 0.3,
+          "weight_diff": 0
+        },
+        {
+          "a": "Office Software and Spreadsheets",
+          "b": "Software and Spreadsheet Skills",
+          "similarity": 0.36,
+          "weight_diff": 5
+        },
+        {
+          "a": "Financial Admin and Record Keeping",
+          "b": "Financial Administration and Record Keeping",
+          "similarity": 0.76,
+          "weight_diff": 5
+        },
+        {
+          "a": "Communication and Enquiry Handling",
+          "b": "Inbox and Telephone Coordination",
+          "similarity": 0.09,
+          "weight_diff": 5
+        },
+        {
+          "a": "Office Coordination and Supplies Management",
+          "b": "Office Supplies and Facilities Coordination",
+          "similarity": 0.25,
+          "weight_diff": 0
+        }
+      ]
+    },
+    {
+      "runs": [
+        2,
+        3
+      ],
+      "criteria_counts": [
+        5,
+        6
+      ],
+      "criteria_matched": "3/5",
+      "mean_weight_diff_matched": 1.7,
+      "must_have_overlap": 0.6,
+      "pairs": [
+        {
+          "a": "Administrative and Office Experience",
+          "b": "Office Supplies and Facilities Coordination",
+          "similarity": 0.1,
+          "weight_diff": 10
+        },
+        {
+          "a": "Calendar, Meeting, and Travel Management",
+          "b": "Calendar and Travel Management",
+          "similarity": 0.53,
+          "weight_diff": 0
+        },
+        {
+          "a": "Office Software and Excel Proficiency",
+          "b": "Software and Spreadsheet Skills",
+          "similarity": 0.33,
+          "weight_diff": 0
+        },
+        {
+          "a": "Financial and Records Administration",
+          "b": "Financial Administration and Record Keeping",
+          "similarity": 0.6,
+          "weight_diff": 5
+        },
+        {
+          "a": "Minute Taking and Communication",
+          "b": "Meeting Minutes and Action Tracking",
+          "similarity": 0.12,
+          "weight_diff": 0
+        }
+      ]
+    }
+  ],
+  "drafts": [
+    {
+      "criteria": [
+        {
+          "id": "calendar_and_meeting_management",
+          "name": "Calendar and Meeting Management",
+          "weight": 20
+        },
+        {
+          "id": "office_software_and_excel",
+          "name": "Office Software and Spreadsheets",
+          "weight": 25
+        },
+        {
+          "id": "financial_admin_and_record_keeping",
+          "name": "Financial Admin and Record Keeping",
+          "weight": 20
+        },
+        {
+          "id": "communication_and_inbox_management",
+          "name": "Communication and Enquiry Handling",
+          "weight": 20
+        },
+        {
+          "id": "office_coordination_and_facilities",
+          "name": "Office Coordination and Supplies Management",
+          "weight": 15
+        }
+      ],
+      "must_haves": [
+        {
+          "check": "cv_text_min_chars",
+          "field": null,
+          "reason": "CV_TOO_SHORT"
+        },
+        {
+          "check": "number_gte",
+          "field": "answers.years_admin_experience",
+          "reason": "INSUFFICIENT_ADMIN_EXPERIENCE"
+        },
+        {
+          "check": "keyword",
+          "field": null,
+          "reason": "NO_ADMIN_ROLE_EXPERIENCE"
+        },
+        {
+          "check": "field_equals",
+          "field": "answers.can_work_four_days_in_office",
+          "reason": "CANNOT_WORK_FOUR_DAYS_ON_SITE"
+        },
+        {
+          "check": "duplicate",
+          "field": null
+        }
+      ]
+    },
+    {
+      "criteria": [
+        {
+          "id": "admin_and_office_support",
+          "name": "Administrative and Office Experience",
+          "weight": 25
+        },
+        {
+          "id": "calendar_and_travel_management",
+          "name": "Calendar, Meeting, and Travel Management",
+          "weight": 20
+        },
+        {
+          "id": "office_software_and_spreadsheets",
+          "name": "Office Software and Excel Proficiency",
+          "weight": 20
+        },
+        {
+          "id": "financial_and_records_admin",
+          "name": "Financial and Records Administration",
+          "weight": 20
+        },
+        {
+          "id": "minutes_and_team_coordination",
+          "name": "Minute Taking and Communication",
+          "weight": 15
+        }
+      ],
+      "must_haves": [
+        {
+          "check": "cv_text_min_chars",
+          "field": null,
+          "reason": "CV_TOO_SHORT"
+        },
+        {
+          "check": "number_gte",
+          "field": "answers.years_admin_experience",
+          "reason": "INSUFFICIENT_ADMIN_EXPERIENCE"
+        },
+        {
+          "check": "field_equals",
+          "field": "answers.onsite_four_days_availability",
+          "reason": "NO_ONSITE_AVAILABILITY"
+        },
+        {
+          "check": "duplicate",
+          "field": null
+        }
+      ]
+    },
+    {
+      "criteria": [
+        {
+          "id": "calendar_and_travel_management",
+          "name": "Calendar and Travel Management",
+          "weight": 20
+        },
+        {
+          "id": "software_and_spreadsheet_skills",
+          "name": "Software and Spreadsheet Skills",
+          "weight": 20
+        },
+        {
+          "id": "inbox_and_phone_enquiries",
+          "name": "Inbox and Telephone Coordination",
+          "weight": 15
+        },
+        {
+          "id": "financial_admin_and_record_keeping",
+          "name": "Financial Administration and Record Keeping",
+          "weight": 15
+        },
+        {
+          "id": "meeting_minuting_and_action_tracking",
+          "name": "Meeting Minutes and Action Tracking",
+          "weight": 15
+        },
+        {
+          "id": "office_supplies_and_facilities",
+          "name": "Office Supplies and Facilities Coordination",
+          "weight": 15
+        }
+      ],
+      "must_haves": [
+        {
+          "check": "cv_text_min_chars",
+          "field": null,
+          "reason": "CV_TOO_SHORT"
+        },
+        {
+          "check": "number_gte",
+          "field": "answers.years_admin_experience",
+          "reason": "INSUFFICIENT_ADMIN_EXPERIENCE"
+        },
+        {
+          "check": "field_equals",
+          "field": "answers.onsite_availability_four_days",
+          "reason": "UNABLE_TO_WORK_ONSITE_FOUR_DAYS"
+        },
+        {
+          "check": "duplicate",
+          "field": null
+        }
+      ]
+    }
+  ]
+}

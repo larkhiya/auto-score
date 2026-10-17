@@ -134,7 +134,7 @@ test('criterion ids must match the profile exactly', () => {
 test('no screening prompt version contains role-specific words (role-agnostic engine)', () => {
   const dir = path.join(__dirname, '..', 'prompts');
   const roleWords = ['customer', 'sales', 'quota', 'prospect', 'support', 'ticket', 'csat', 'cold call', 'retail', 'call cent', 'sdr', 'csr', 'representative', 'pipeline'];
-  for (const f of fs.readdirSync(dir).filter((x) => x.startsWith('screening_'))) {
+  for (const f of fs.readdirSync(dir).filter((x) => x.startsWith('screening_') || x.startsWith('job_profile_builder_'))) {
     const md = fs.readFileSync(path.join(dir, f), 'utf8').toLowerCase();
     const found = roleWords.filter((w) => md.includes(w));
     assert.deepEqual(found, [], `role words in ${f}: ${found.join(', ')}`);
@@ -146,7 +146,7 @@ test('the configured prompt version exists and every version has the same sectio
   assert.ok(prompt.versions().includes(SCREENING_PROMPT_VERSION));
   const gen = require('../src/generated/prompts');
   const keys = (v) => Object.keys(gen[v]).sort().join(',');
-  for (const v of prompt.versions()) assert.equal(keys(v), keys('screening_v1'), v);
+  for (const v of prompt.versions().filter((x) => x.startsWith('screening_'))) assert.equal(keys(v), keys('screening_v1'), v);
 });
 
 test('extraction lists are capped so long CVs fit the output budget', () => {

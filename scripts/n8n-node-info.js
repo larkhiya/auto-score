@@ -56,7 +56,10 @@ function show(props, indent) {
   for (const p of props || []) {
     const opts = p.options && p.type !== 'collection' && p.type !== 'fixedCollection'
       ? ' options=' + p.options.map((o) => o.value ?? o.name).join('|') : '';
-    const shown = p.displayOptions ? ' show=' + JSON.stringify(p.displayOptions.show || p.displayOptions.hide) : '';
+    // Label show vs hide: printing a hide-condition as "show" once hid a required switch (L-010).
+    const shown = p.displayOptions
+      ? (p.displayOptions.show ? ' show=' + JSON.stringify(p.displayOptions.show) : '') + (p.displayOptions.hide ? ' HIDE=' + JSON.stringify(p.displayOptions.hide) : '')
+      : '';
     const hint = p.builderHint && (p.builderHint.propertyHint || p.builderHint.message);
     console.log(`${indent}${p.name}: ${p.type} default=${JSON.stringify(p.default)}${opts}${shown}${hint ? `  // hint: ${String(hint).replace(/\s+/g, ' ').slice(0, 300)}` : ''}`);
     if (p.type === 'collection') show(p.options, indent + '  ');

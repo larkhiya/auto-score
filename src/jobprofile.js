@@ -1,7 +1,17 @@
 // Checks on a JobProfile that JSON Schema can't express (brief §5.5). Pure; schema validation
-// (src/validate.js) runs first, so this code can assume the shape is right.
-// Phase 7 adds the bias check and the registry check for AI-drafted profiles.
+// (src/validate.js) runs first, so this code can assume the shape is right. The bias check is
+// src/bias.js; its flags live in the profile and block approval here until resolved.
 const { containsQuote } = require('./text');
+
+// System checks every profile gets from code, not from the JD: they need no JD quote.
+const SYSTEM_CHECKS = ['cv_text_min_chars', 'duplicate'];
+function leaves(node, out = []) {
+  if (!node) return out;
+  if (node.all || node.any) (node.all || node.any).forEach((n) => leaves(n, out));
+  else if (node.not) leaves(node.not, out);
+  else out.push(node);
+  return out;
+}
 
 function checkProfile(profile) {
   const errors = [];
@@ -29,6 +39,14 @@ function checkProfile(profile) {
       if (!c.jd_quote) add('JD_QUOTE_MISSING', `criterion "${c.id}" has no JD quote`, c.id);
       else if (!containsQuote(profile.source_jd_text, c.jd_quote)) add('JD_QUOTE_NOT_FOUND', `criterion "${c.id}" quotes text that is not in the JD`, c.id);
     }
+    // Must-haves are grounded too: every pre-filter rule the AI drafted must cite the JD.
+    if (profile.created_by === 'llm_draft') {
+      leaves(profile.prefilter).filter((l) => !SYSTEM_CHECKS.includes(l.check)).forEach((l) => {
+        const label = `must-have "${l.reason || l.check}"`;
+        if (!l.jd_quote) add('MUST_HAVE_QUOTE_MISSING', `${label} has no JD quote`, l.reason || l.check);
+        else if (!containsQuote(profile.source_jd_text, l.jd_quote)) add('MUST_HAVE_QUOTE_NOT_FOUND', `${label} quotes text that is not in the JD`, l.reason || l.check);
+      });
+    }
   } else if (profile.created_by === 'llm_draft') {
     add('JD_MISSING', 'an AI-drafted profile must keep the job description it came from');
   }
@@ -36,4 +54,4 @@ function checkProfile(profile) {
   return { ok: errors.length === 0, errors };
 }
 
-module.exports = { checkProfile };
+module.exports = { checkProfile, leaves, SYSTEM_CHECKS };

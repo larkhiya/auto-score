@@ -92,7 +92,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items m
 - Next: Phase 7
 
 ### S-02 · 2026-10-17
-- Done: start-session by hand (the skill wasn't loaded in this session); C-10 retrieval (3 tries → 🟨); Gemini credential linked; WF-10 + WF-12 live; smoke runs; 20-per-role runs with v1 (32/40) and v2 (37/40); injection test; scripts `screen-records`, `show-results`, `injection-test`, `lib/score-direct`
+- Done: start-session by hand (the skill wasn't loaded in this session); C-10 retrieval (3 tries → 🟨); Gemini credential linked; WF-10 + WF-12 live; smoke runs; 20-per-role runs with v1 (32/40) and v2 (37/40); injection test; scripts `screen-records`, `show-results`, `injection-check` (was injection-test, L-009), `lib/score-direct`
 - Verified (evidence): see the Phase 4 and 5 checklists (RunLogs, `show-results` output, injection report); 146 tests
 - Not yet verified: v1 vs v2 on identical data (Phase 8); the full dataset through the live pipeline
 - Concepts: C-10 → 🟨 practiced; C-12 to C-21 deferred with pointers
