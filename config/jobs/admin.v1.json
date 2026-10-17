@@ -1,0 +1,197 @@
+{
+  "schema_version": "1.1.0",
+  "job_id": "admin",
+  "version": 1,
+  "status": "approved",
+  "title": "Administrative Assistant",
+  "source_jd_text": "Administrative Assistant, Operations Team (fictional company: Harrow & Vale Property Services)\n\nAbout the role\nWe are looking for an Administrative Assistant to keep a busy 15-person operations team organised. You will be the first point of contact for the office and make sure meetings, documents and records run smoothly.\n\nWhat you will do\n- Manage calendars for three managers, schedule meetings and book rooms, travel and accommodation.\n- Answer the main phone line and the shared inbox, and direct enquiries to the right person.\n- Prepare letters, reports and presentations in Microsoft Word, Excel and PowerPoint (or Google Workspace).\n- Keep digital and paper records accurate and up to date, including contracts and supplier files.\n- Process purchase orders, invoices and expense claims and track them in a spreadsheet.\n- Take minutes at weekly team meetings and follow up on action points.\n- Order office supplies and coordinate with building maintenance.\n\nWhat we are looking for\n- At least two years of experience in an administrative, office or reception role.\n- Strong organisation skills and attention to detail.\n- Confident with Microsoft Office or Google Workspace, especially Excel.\n- Clear written and spoken English.\n- You must be able to work in our office four days a week.\n\nNice to have\n- Experience with a project or task tool such as Asana or Trello.\n- Experience supporting a property, facilities or real-estate business.\n- A recognised administrative or office-management qualification.\n\nWhat we offer\nHybrid working (one day from home), 25 days of annual leave, a training budget and a friendly team.\n",
+  "prefilter": {
+    "all": [
+      {
+        "check": "cv_text_min_chars",
+        "value": 300,
+        "reason": "CV_TOO_SHORT"
+      },
+      {
+        "check": "number_gte",
+        "reason": "INSUFFICIENT_ADMIN_EXPERIENCE",
+        "jd_quote": "At least two years of experience in an administrative, office or reception role.",
+        "field": "answers.years_admin_experience",
+        "value": 2
+      },
+      {
+        "check": "field_equals",
+        "reason": "NO_ONSITE_AVAILABILITY",
+        "jd_quote": "You must be able to work in our office four days a week.",
+        "field": "answers.onsite_availability",
+        "value": "yes"
+      },
+      {
+        "check": "keyword",
+        "reason": "NO_ADMINISTRATIVE_EXPERIENCE",
+        "jd_quote": "At least two years of experience in an administrative, office or reception role.",
+        "terms": [
+          "administrative assistant",
+          "administrator",
+          "office assistant",
+          "receptionist",
+          "office coordinator",
+          "admin assistant"
+        ]
+      },
+      {
+        "not": {
+          "check": "duplicate"
+        },
+        "reason": "DUPLICATE_APPLICATION"
+      }
+    ]
+  },
+  "criteria": [
+    {
+      "id": "calendar_and_travel_management",
+      "name": "Calendar and Travel Management",
+      "weight": 20,
+      "description": "Experience managing multiple managers' calendars, coordinating meetings, booking rooms, and arranging travel and accommodation.",
+      "anchors": {
+        "0": "No evidence of calendar management, meeting scheduling, or travel booking.",
+        "1": "Brief mention of scheduling meetings or booking travel without context on volume or complexity.",
+        "2": "Some evidence of coordinating diaries and making standard travel or room bookings for colleagues.",
+        "3": "Clear evidence of managing calendars for multiple managers, scheduling complex meetings, and booking detailed travel and accommodation.",
+        "4": "Sustained, specific evidence of proactively coordinating multi-manager schedules, resolving diary conflicts, and organizing seamless end-to-end travel itineraries."
+      },
+      "evidence_hints": [
+        "calendar management",
+        "schedule meetings",
+        "room bookings",
+        "travel and accommodation",
+        "diary management",
+        "travel itineraries"
+      ],
+      "jd_quote": "Manage calendars for three managers, schedule meetings and book rooms, travel and accommodation."
+    },
+    {
+      "id": "office_software_proficiency",
+      "name": "Office Software Proficiency (Excel, Word, PowerPoint)",
+      "weight": 25,
+      "description": "Proficiency using office productivity software (Microsoft Office or Google Workspace) to prepare documents, presentations, and track data in spreadsheets.",
+      "anchors": {
+        "0": "No evidence of using Microsoft Office or Google Workspace applications.",
+        "1": "Mentions Microsoft Office or Google Workspace as a list of skills without practical application details.",
+        "2": "Some evidence of drafting documents, preparing basic presentations, or entering data into spreadsheets.",
+        "3": "Clear evidence of preparing polished reports, presentations, and utilizing Excel or Google Sheets for structured data tracking and analysis.",
+        "4": "Sustained, specific evidence of advanced document formatting, dynamic presentations, and strong spreadsheet expertise including formulas, data tracking, or pivot tables."
+      },
+      "evidence_hints": [
+        "Microsoft Office",
+        "Google Workspace",
+        "Excel",
+        "PowerPoint",
+        "spreadsheets",
+        "reports and presentations"
+      ],
+      "jd_quote": "Confident with Microsoft Office or Google Workspace, especially Excel."
+    },
+    {
+      "id": "financial_administration",
+      "name": "Financial Administration and Invoicing",
+      "weight": 20,
+      "description": "Experience handling financial admin tasks, including processing purchase orders, invoices, and expense claims, and tracking them in spreadsheets.",
+      "anchors": {
+        "0": "No evidence of financial administration, invoicing, or expense handling.",
+        "1": "Vague mention of dealing with receipts, bills, or invoices.",
+        "2": "Some evidence of processing invoices, raising purchase orders, or logging basic expenses.",
+        "3": "Clear, sustained evidence of regularly processing purchase orders, reconciling invoices, handling expense claims, and tracking figures in spreadsheets.",
+        "4": "Sustained, measurable evidence of managing end-to-end invoice processing workflows, tracking expenditure spreadsheets with high accuracy, and resolving billing discrepancies."
+      },
+      "evidence_hints": [
+        "purchase orders",
+        "invoice processing",
+        "expense claims",
+        "spreadsheet tracking",
+        "invoice reconciliation",
+        "financial administration"
+      ],
+      "jd_quote": "Process purchase orders, invoices and expense claims and track them in a spreadsheet."
+    },
+    {
+      "id": "record_keeping_and_minute_taking",
+      "name": "Record Keeping and Minute Taking",
+      "weight": 15,
+      "description": "Experience maintaining accurate digital and paper records, contract files, taking structured meeting minutes, and tracking action points.",
+      "anchors": {
+        "0": "No evidence of maintaining records, managing files, or taking meeting minutes.",
+        "1": "Brief mention of filing paperwork or taking general notes during meetings.",
+        "2": "Some evidence of organizing digital or paper records and drafting meeting notes.",
+        "3": "Clear evidence of systematically keeping digital and paper files (such as contracts and supplier files) up to date, taking formal meeting minutes, and tracking action items.",
+        "4": "Sustained, specific evidence of establishing or maintaining rigorous document management systems, managing sensitive records, and delivering clear minutes with disciplined action point follow-through."
+      },
+      "evidence_hints": [
+        "digital and paper records",
+        "contract files",
+        "supplier files",
+        "minute taking",
+        "action points",
+        "filing systems"
+      ],
+      "jd_quote": "Keep digital and paper records accurate and up to date, including contracts and supplier files."
+    },
+    {
+      "id": "office_coordination_and_enquiries",
+      "name": "Office Coordination and Enquiries Management",
+      "weight": 20,
+      "description": "Handling front-of-house communications, managing phone lines and shared inboxes, ordering office supplies, and liaising with facilities or maintenance.",
+      "anchors": {
+        "0": "No evidence of managing office communications, shared inboxes, or supplies.",
+        "1": "Brief or vague mention of answering phones or assisting around the office.",
+        "2": "Some evidence of handling incoming phone calls, responding to general emails, and ordering supplies.",
+        "3": "Clear evidence of serving as an office contact point, triaging shared inboxes and phone calls, ordering supplies, and coordinating with maintenance contractors.",
+        "4": "Sustained, specific evidence of efficiently managing high-volume enquiries, maintaining smooth office operations, and building reliable relationships with building facilities and external suppliers."
+      },
+      "evidence_hints": [
+        "shared inbox",
+        "phone line",
+        "directing enquiries",
+        "office supplies",
+        "building maintenance",
+        "first point of contact"
+      ],
+      "jd_quote": "Answer the main phone line and the shared inbox, and direct enquiries to the right person."
+    }
+  ],
+  "nice_to_haves": [
+    {
+      "id": "task_management_tools",
+      "name": "Project and Task Tools",
+      "description": "Familiarity with project or task management platforms such as Asana or Trello.",
+      "jd_quote": "Experience with a project or task tool such as Asana or Trello."
+    },
+    {
+      "id": "property_sector_experience",
+      "name": "Property or Facilities Experience",
+      "description": "Prior experience providing administrative support within a property, facilities, or real-estate organization.",
+      "jd_quote": "Experience supporting a property, facilities or real-estate business."
+    },
+    {
+      "id": "admin_qualification",
+      "name": "Administrative Qualification",
+      "description": "Holding a formal, recognised certification or qualification in administration or office management.",
+      "jd_quote": "A recognised administrative or office-management qualification."
+    }
+  ],
+  "thresholds": {
+    "shortlist": 75,
+    "maybe": 55,
+    "min_confidence": 0.6
+  },
+  "bias_flags": [],
+  "created_by": "llm_draft",
+  "approved_by": "jcw",
+  "approved_at": "2026-10-17T16:22:39.588Z",
+  "created_at": "2026-10-17T16:11:12.356Z",
+  "builder": {
+    "prompt_version": "job_profile_builder_v1",
+    "model": "gemini-3.8-flash",
+    "check_errors": []
+  }
+}

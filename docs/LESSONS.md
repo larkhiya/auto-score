@@ -14,6 +14,15 @@ Template:
 
 ---
 
+## L-011 · An interpreter "fallback" that ran nothing
+- **Date:** 2026-10-18 · **Phase:** 7 · **Who:** Claude
+- **What happened:** to apply four edits to `scripts/generate-applicants.js` I wrote `python3 - <<'EOF' … EOF || node - <<'EOF2' …`, meaning "whichever is installed". The python heredoc was empty, python3 exited 0 having done nothing, so the Node edit script never ran.
+- **Symptom:** the command printed nothing; the script ends with `console.log('ok')`.
+- **Root cause:** a `||` chain treats "succeeded at nothing" as success. I reached for a clever shell construct instead of running the one interpreter I'd actually written the script for.
+- **Fix:** ran `node - <<'EOF'` directly. It printed `ok`, and the regenerated dataset and `npm test` (158/158) confirmed the edits.
+- **Prevention rule:** run the interpreter you wrote the script for, and make every edit script print a success marker that you check before moving on. Same family as L-003 (shell constructs); no new Learned Rule.
+- **Concept it illustrates:** —
+
 ## L-010 · The AI chain ignored its output parser
 - **Date:** 2026-10-18 · **Phase:** 7 · **Who:** Claude
 - **What happened:** WF-05's first two drafts both failed with "no output". The LLM Chain returned raw text (`{"text": "```json…"}`), and the model never saw the schema's format instructions, so it invented field names (`job_title`, `id`).

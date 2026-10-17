@@ -148,7 +148,8 @@ test('number_gte: numbers, numeric strings, missing and junk', () => {
 test('pre-filter matches the answer key on 100% of the dataset (outcome AND reason codes)', () => {
   const rows = loadApplicants();
   const records = toCrmRecords(rows);
-  const profiles = { csr, sdr };
+  // admin: the AI-drafted profile a person approved (Phase 7), exported from the CRM.
+  const profiles = { csr, sdr, admin: loadProfile('admin') };
   const mismatches = [];
   rows.forEach((row, i) => {
     const appRec = fromCrmRecord(records[i]);

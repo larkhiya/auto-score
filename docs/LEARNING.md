@@ -37,9 +37,17 @@ Under D-008 (straight-through build), each phase's concepts are marked ⏭ when 
 | C-30 | Secrets and environments | 9 | house keys vs a photo of your keys online | ⬜ | |
 | C-31 | Explaining a system: case study and demo | 9 | a museum tour guide | ⬜ | |
 | C-32 | Role-agnostic design: one engine, many job profiles | 1, 7 | one exam-marking machine, a different answer key per exam | ⏭ | |
-| C-33 | AI-drafted config with human approval, then frozen | 7 | a junior drafts the contract, a manager signs it, nobody edits the signed copy | ⬜ | |
+| C-33 | AI-drafted config with human approval, then frozen | 7 | a junior drafts the contract, a manager signs it, nobody edits the signed copy | ⏭ | |
 
 ## Concept break notes (newest first)
+### C-32 (in depth), C-33, C-20 and C-21 revisited · 2026-10-18 (Phase 7)
+- Deferred under D-008. Review-pass pointers, each tied to evidence from this phase:
+  - C-32: adding Administrative Assistant changed no file under `src/`, `prompts/`, `workflows/`, `contracts/` or `crm/` (`git diff` in PROGRESS, Phase 7). The same WF-10 scored 31 Admin applicants 31/31 against the answer key. Question: what is the ONE thing that differs between scoring a csr and an admin applicant?
+  - C-33: you approved Admin v1 in the CRM (`approved_by: jcw`); every Admin score records `job_profile_version: 1`. Question (the brief's can-explain target): why must an approved profile be frozen, and what would break in the eval and the audit trail if it weren't?
+  - C-20 revisited: bias can enter through the JD. The planted biased JD got 9 flags, and Approve stays disabled until a person resolves them (server-side too: `tests/jobprofile.test.js`). Separate point: the approved keyword list leaves out "Executive Assistant", so a strong PA is rejected (D-030). Is a too-narrow rule a fairness problem, a quality problem, or both?
+  - C-21 revisited: a profile change means a new version (v2), never an edit of v1. That's the same rule as the prompts (D-026).
+  - Worth discussing: the Admin scores were perfectly flat (every strong 100, every medium 65). That proves the anchors are applied consistently. It does NOT prove accuracy, because the personas are templates. What data would you need to claim accuracy?
+
 ### C-22 (in depth), C-23, C-24, C-25 · 2026-10-17 (Phase 6)
 - Deferred under D-008. Review-pass pointers:
   - C-23: `src/retry.js` + WF-11. Retry 429/5xx/timeouts with doubling waits plus jitter, never other 4xx. Question: why does retrying a 422 make things worse, not better?

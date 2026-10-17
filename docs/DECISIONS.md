@@ -12,6 +12,31 @@ Under D-008, Claude makes design choices during the straight-through build and m
 
 ---
 
+## D-030 · The answer key follows the APPROVED profile; rule-quality problems are findings for a person
+- **Date:** 2026-10-18 · **Phase:** 7 · **Status:** pending learner review
+- **Decided by:** Claude (D-008)
+- **Context:** the approved Admin profile's keyword must-have accepts six job titles. "Executive Assistant", "Personal Assistant" and "Secretary" aren't among them, so a strong PA fails the pre-filter (`admin-022`, `title_not_in_keyword_list`). The answer key has to say something for that CV.
+- **Options:**
+  - A: the key follows the approved rules (expected: fail, `NO_ADMINISTRATIVE_EXPERIENCE`) (+ the pre-filter test checks one thing: "does the code do exactly what a person approved"; − the key encodes a rule we think is too narrow)
+  - B: the key follows what a good rule would be (expected: pass) (− the pre-filter "fails" with no code bug; the test then mixes code correctness with rule quality)
+  - C: fix the profile myself before generating (− editing an approved profile is a human action; it would also break the freeze)
+- **Decision:** A, and the gap is raised to the learner as a finding. The fix, if wanted, is a v2 edited and approved in the CRM; v1 scores keep their version.
+- **Why:** the pre-filter must be 100% predictable from the approved rules (Phase 4). Judging whether the rules are good is the reviewer's job, and that judgement needs a person.
+- **Trade-offs accepted:** the dataset contains one "correct" rejection that a recruiter would probably disagree with.
+- **Revisit if:** the learner edits the keyword list (then the PA persona's expected outcome changes with the new version).
+
+## D-029 · A stronger model drafts job profiles; the light model screens
+- **Date:** 2026-10-18 · **Phase:** 7 · **Status:** pending learner review
+- **Decided by:** Claude (D-008)
+- **Context:** WF-05 runs a few times per role (draft, maybe a re-draft). Screening runs twice per applicant, hundreds of times. Both are on the Gemini free tier (D-007).
+- **Options:**
+  - A: `gemini-3.5-flash-lite` for both (+ one model to know; − drafting a whole rubric with anchors, quotes and must-haves is the hardest single LLM task in the system)
+  - B: `gemini-3.8-flash` for drafting, flash-lite for screening (+ quality where volume is tiny; − two models, two sets of quirks)
+- **Decision:** B. WF-05's Gemini Chat Model node uses `models/gemini-3.8-flash`, temperature 0. Screening stays on flash-lite (`src/gemini.js`).
+- **Why:** cost scales with volume, quality matters most where a mistake gets frozen into every later score. A draft is also reviewed by a person; a screening call is not.
+- **Trade-offs accepted:** builder consistency is still only moderate (3 drafts: 3–4 of 5 criteria matched, must-have overlap 0.5–0.6; `reports/builder-consistency-admincheck-2026-10-17.json`). Human review covers the variance.
+- **Revisit if:** the free tier drops 3.8 Flash, or the role-switch / eval runs show screening, not drafting, is the weak link.
+
 ## D-028 · Dead letters live in n8n, are written by whoever still holds the payload, and replay via a new event
 - **Date:** 2026-10-17 · **Phase:** 6 · **Status:** pending learner review
 - **Decided by:** Claude (D-008)

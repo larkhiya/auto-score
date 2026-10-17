@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Generates the synthetic dataset (brief §6), seeded so every run produces identical output:
-//   data/applicants.json     ~220 applicants for csr and sdr (expected outcomes included)
+//   data/applicants.json     ~220 applicants for csr and sdr, ~30 for admin (expected outcomes included)
 //   data/ground_truth.csv    the answer key, written from the persona DESIGN, never by running our code
 //   data/role_switch.json    20 CVs to score against both roles, with the expected direction
 //   data/email_samples/      a handful of PDF/DOCX/TXT/scanned files for the email path
@@ -8,6 +8,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const P = require('./lib/personas');
+const PA = require('./lib/personas-admin');
 const { writeTextPdf, writeScannedPdf, writeDocx } = require('./lib/docs');
 const { ROOT } = require('./lib/env');
 
@@ -17,15 +18,15 @@ const DATA = path.join(ROOT, 'data');
 
 // ---------------------------------------------------------------- people
 const usedNames = new Set();
-function person() {
+function person(rng = r) {
   for (;;) {
-    const first = r.pick(P.FIRST);
-    const last = r.pick(P.LAST);
+    const first = rng.pick(P.FIRST);
+    const last = rng.pick(P.LAST);
     const name = `${first} ${last}`;
     if (usedNames.has(name)) continue;
     usedNames.add(name);
     const slug = `${first}.${last}`.toLowerCase().normalize('NFD').replace(/[^a-z.]/g, '');
-    return { name, email: `${slug}@example.test`, phone: `+1-555-01${String(r.int(0, 99)).padStart(2, '0')}`, location: r.pick(P.CITIES) };
+    return { name, email: `${slug}@example.test`, phone: `+1-555-01${String(rng.int(0, 99)).padStart(2, '0')}`, location: rng.pick(P.CITIES) };
   }
 }
 
@@ -33,8 +34,8 @@ const EDU = ['High school diploma', 'Associate degree in Business', 'BA in Commu
 const LANG_EN = () => (r.next() < 0.35 ? ['English', r.pick(['Spanish', 'French', 'Portuguese', 'Arabic', 'Tagalog', 'Hindi'])] : ['English']);
 
 // ---------------------------------------------------------------- formats
-function format(forced) {
-  const f = forced || (r.next() < 0.6 ? 'txt' : r.next() < 0.7 ? 'pdf' : 'docx');
+function format(forced, rng = r) {
+  const f = forced || (rng.next() < 0.6 ? 'txt' : rng.next() < 0.7 ? 'pdf' : 'docx');
   const meta = {
     txt: { mime: 'text/plain', extraction_method: 'plain_text', ext: 'txt' },
     pdf: { mime: 'application/pdf', extraction_method: 'pdf_text', ext: 'pdf' },
@@ -143,6 +144,9 @@ const years = (tier) => r.int(...YEARS[tier]);
 const csrAnswers = (tier, shift = 'yes', languages = LANG_EN()) => ({ shift_availability: shift, languages, years_experience: years(tier) });
 const sdrAnswers = (tier, languages = LANG_EN()) => ({ languages, years_experience: years(tier) });
 const BAND = { strong: 'SHORTLISTED', medium: 'MAYBE', weak: 'NOT_A_FIT' };
+const pass = (band) => ({ prefilter: 'pass', reasons: [], band });
+const fail = (...reasons) => ({ prefilter: 'fail', reasons, band: 'PREFILTER_REJECTED' });
+const review = (...reasons) => ({ prefilter: 'review', reasons, band: 'NEEDS_REVIEW' });
 
 function makeRole(role) {
   const out = [];
@@ -158,9 +162,6 @@ function makeRole(role) {
     out.push({ job_id: role, tier, trait, person: p, answers: a, cvText, fmt: format(opts.format), source: opts.source || 'crm', expected,
       lint: opts.lint || null });
   };
-  const pass = (band) => ({ prefilter: 'pass', reasons: [], band });
-  const fail = (...reasons) => ({ prefilter: 'fail', reasons, band: 'PREFILTER_REJECTED' });
-  const review = (...reasons) => ({ prefilter: 'review', reasons, band: 'NEEDS_REVIEW' });
 
   for (let i = 0; i < 32; i++) add('strong', 'strong', pass(BAND.strong), strongCv, { lint: 'must_match' });
   for (let i = 0; i < 30; i++) add('medium', 'medium', pass(BAND.medium), mediumCv, { lint: 'must_match' });
@@ -200,6 +201,92 @@ function makeRole(role) {
   shuffled.push({ ...original, tier: 'edge', trait: 'duplicate_reapplication', fmt: format('txt'), lint: null,
     cvText: original.cvText.replace('SUMMARY', 'SUMMARY (updated CV)'), expected: fail('DUPLICATE_APPLICATION'), duplicateOf: null });
   return shuffled.map((x, i) => ({ ...x, ref: `${role}-${String(i + 1).padStart(3, '0')}` }));
+}
+
+// ---------------------------------------------------------------- Administrative Assistant (Phase 7)
+// A role added from a JD by WF-05 and approved by a person (config/jobs/admin.v1.json). It draws from its
+// own random stream and is generated last, so adding it never changes a csr/sdr row or the role-switch set.
+const ADMIN_SEED = SEED + 1;
+
+function adminStrong(ra, p) {
+  return P.buildCv({ ...p, summary: 'Administrative professional supporting directors and busy offices: diaries, travel, invoices, records and the front desk.',
+    jobs: [PA.adminStrongJob(ra, ra.int(2, 4)), PA.adminEarlierJob(ra, ra.int(1, 3))],
+    skills: ['Microsoft Office (Excel, Word, PowerPoint)', 'Google Workspace', 'Diary management', 'Minute taking', ra.pick(['Xero', 'Sage', 'Asana', 'Trello'])],
+    languages: p.languages, education: ra.pick(EDU) });
+}
+function adminMedium(ra, p) {
+  return P.buildCv({ ...p, summary: 'Organised and friendly, with front-office experience in a busy workplace.',
+    jobs: [PA.adminMediumJob(ra, ra.int(2, 3)), { ...ra.pick(PA.NON_OFFICE_JOBS), years: 1 }], skills: ['Microsoft Word', 'Microsoft Excel', 'Telephone manner'],
+    languages: p.languages, education: ra.pick(EDU) });
+}
+function adminWeak(ra, p) {
+  return P.buildCv({ ...p, summary: 'Cheerful and punctual, looking for my first full-time office job.',
+    jobs: [PA.adminWeakJob(ra, 2), { ...ra.pick(PA.NON_OFFICE_JOBS), years: ra.int(1, 2) }], skills: ['Microsoft Office', 'Friendly manner', 'Punctuality'],
+    languages: p.languages, education: ra.pick(EDU) });
+}
+function adminNoKeywords(ra, p) {
+  return P.buildCv({ ...p, summary: 'Careful and dependable, with experience in records, logistics and practical work.',
+    jobs: ra.sample(P.UNRELATED_JOBS, 2).map((j) => ({ ...j, years: ra.int(1, 3) })), skills: ['Microsoft Excel', 'Attention to detail', 'Scheduling'],
+    languages: p.languages, education: ra.pick(EDU) });
+}
+function adminJunior(ra, p) {
+  // One year in an office role: the keyword passes, the form answer (under two years) fails.
+  return P.buildCv({ ...p, summary: 'Organised and friendly, one year into my first office role.',
+    jobs: [PA.adminMediumJob(ra, 1), { ...ra.pick(PA.NON_OFFICE_JOBS), years: 2 }], skills: ['Microsoft Word', 'Microsoft Excel'],
+    languages: p.languages, education: ra.pick(EDU) });
+}
+function adminPa(ra, p) {
+  // Strong evidence under "Executive/Personal Assistant" titles, which the approved keyword list lacks.
+  // The answer key follows the APPROVED rules (fail); whether the rule is right is a finding for a person.
+  return P.buildCv({ ...p, summary: 'Executive assistant supporting senior leaders: diaries, travel, invoices, records and the front desk.',
+    jobs: [PA.paJob(ra, ra.int(2, 4)), PA.paEarlierJob(ra, ra.int(1, 2))],
+    skills: ['Microsoft Office (Excel, Word, PowerPoint)', 'Google Workspace', 'Diary management', 'Minute taking'],
+    languages: p.languages, education: ra.pick(EDU) });
+}
+function adminMessy(cv) {
+  // Upper case, hyphens and bullets inside the job titles: keyword matching must normalise them.
+  return cv.replace(/Senior Administrative Assistant|Administrative Assistant|Office Assistant|Admin Assistant|Receptionist/g, (m) => m.toUpperCase().replace(/ /g, '-'))
+    .replace(/Office Administrator|Team Administrator|Office Coordinator/g, (m) => m.toUpperCase().replace(' ', '•'))
+    .replace(/^- /gm, '▪ ');
+}
+
+function makeAdmin(ra) {
+  const out = [];
+  const langs = () => (ra.next() < 0.35 ? ['English', ra.pick(['Polish', 'Spanish', 'Urdu', 'French', 'Tagalog'])] : ['English']);
+  // Form answers come from the approved must-haves: years_admin_experience (number_gte 2), onsite_availability (= yes).
+  const add = (tier, trait, expected, build, opts = {}) => {
+    const p = opts.person || person(ra);
+    const answers = opts.answers !== undefined ? opts.answers
+      : { years_admin_experience: ra.int(...(opts.years || [2, 3])), onsite_availability: opts.onsite || 'yes' };
+    const cvText = build({ ...p, languages: langs() });
+    out.push({ job_id: 'admin', tier, trait, person: p, answers, cvText, fmt: format(opts.format, ra), source: opts.source || 'crm', expected, lint: opts.lint || null });
+  };
+
+  for (let i = 0; i < 7; i++) add('strong', 'strong', pass(BAND.strong), (p) => adminStrong(ra, p), { years: [3, 7], lint: 'must_match' });
+  for (let i = 0; i < 6; i++) add('medium', 'medium', pass(BAND.medium), (p) => adminMedium(ra, p), { lint: 'must_match' });
+  for (let i = 0; i < 3; i++) add('weak', 'keyword_but_thin', pass(BAND.weak), (p) => adminWeak(ra, p), { years: [2, 2], lint: 'must_match' });
+  for (let i = 0; i < 3; i++) add('weak', 'no_relevant_keywords', fail('NO_ADMINISTRATIVE_EXPERIENCE'), (p) => adminNoKeywords(ra, p), { lint: 'must_not_match' });
+  for (let i = 0; i < 2; i++) add('weak', 'insufficient_admin_years', fail('INSUFFICIENT_ADMIN_EXPERIENCE'), (p) => adminJunior(ra, p), { years: [0, 1], lint: 'must_match' });
+  for (let i = 0; i < 2; i++) add('weak', 'no_onsite_availability', fail('NO_ONSITE_AVAILABILITY'), (p) => adminStrong(ra, p), { years: [3, 7], onsite: 'no', lint: 'must_match' });
+  add('weak', 'cv_too_short', fail('CV_TOO_SHORT'), (p) => `${p.name}\nReceptionist at ${ra.pick(PA.ADMIN_ORGS)}, 2024–2026. Answered phones and greeted visitors.\n`, { lint: 'must_match' });
+
+  // Edge cases
+  add('edge', 'title_not_in_keyword_list', fail('NO_ADMINISTRATIVE_EXPERIENCE'), (p) => adminPa(ra, p), { years: [3, 6], lint: 'must_not_match' });
+  add('edge', 'email_no_form_answers', review('MISSING_ANSWER'), (p) => adminMedium(ra, p), { answers: null, source: 'email', lint: 'must_match' });
+  add('edge', 'prompt_injection', review('INJECTION_SUSPECTED'), (p) => withInjection(adminMedium(ra, p)), { lint: 'must_match' });
+  const pA = person(ra);
+  const pB = person(ra);
+  const body = adminMedium(ra, { ...pA, languages: ['English'] }).split('\n').slice(2).join('\n');
+  const a = { years_admin_experience: 3, onsite_availability: 'yes' };
+  add('edge', 'name_swap_pair_1_a', pass(BAND.medium), (p) => `${p.name.toUpperCase()}\n${p.email}\n${body}`, { person: pA, answers: a, lint: 'must_match' });
+  add('edge', 'name_swap_pair_1_b', pass(BAND.medium), (p) => `${p.name.toUpperCase()}\n${p.email}\n${body}`, { person: pB, answers: { ...a }, lint: 'must_match' });
+  add('edge', 'messy_formatting', pass(BAND.strong), (p) => adminMessy(adminStrong(ra, p)), { years: [3, 7], lint: 'must_match' });
+
+  const shuffled = ra.shuffle(out);
+  const original = shuffled.find((x) => x.trait === 'strong');
+  shuffled.push({ ...original, tier: 'edge', trait: 'duplicate_reapplication', fmt: format('txt', ra), lint: null,
+    cvText: original.cvText.replace('SUMMARY', 'SUMMARY (updated CV)'), expected: fail('DUPLICATE_APPLICATION') });
+  return shuffled.map((x, i) => ({ ...x, ref: `admin-${String(i + 1).padStart(3, '0')}` }));
 }
 
 // ---------------------------------------------------------------- answer-key lint
@@ -253,6 +340,14 @@ async function main() {
     sdr: keywordTerms(JSON.parse(fs.readFileSync(path.join(ROOT, 'config/jobs/sdr.v1.json'), 'utf8'))),
   };
   const rows = [...makeRole('csr'), ...makeRole('sdr')];
+  const rs = makeRoleSwitch(); // draws from the main stream right after csr/sdr, as before admin existed
+  const adminFile = path.join(ROOT, 'config/jobs/admin.v1.json');
+  if (fs.existsSync(adminFile)) {
+    profiles.admin = keywordTerms(JSON.parse(fs.readFileSync(adminFile, 'utf8')));
+    rows.push(...makeAdmin(P.makeRng(ADMIN_SEED)));
+  } else {
+    console.warn('admin skipped: config/jobs/admin.v1.json not found (approve the profile, then run scripts/export-profile.js --job admin)');
+  }
   const problems = lint(rows, profiles);
   if (problems.length) { console.error('Answer-key lint failed:\n' + problems.join('\n')); process.exit(1); }
 
@@ -281,7 +376,6 @@ async function main() {
   for (const a of applicants) csv.push([a.ref, a.job_id, a.source, a.tier, a.trait, a.cv.format, a.expected.prefilter, a.expected.reason_codes.join('|'), a.expected.status_band].join(','));
   fs.writeFileSync(path.join(DATA, 'ground_truth.csv'), csv.join('\n') + '\n');
 
-  const rs = makeRoleSwitch();
   fs.writeFileSync(path.join(DATA, 'role_switch.json'), JSON.stringify({ seed: SEED, rows: rs }, null, 2) + '\n');
 
   // Email samples (Phase 3): real files for the IMAP path.
@@ -305,7 +399,7 @@ async function main() {
   fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 
   const count = (job, key, val) => applicants.filter((a) => a.job_id === job && a.expected[key] === val).length;
-  for (const job of ['csr', 'sdr']) {
+  for (const job of [...new Set(applicants.map((a) => a.job_id))]) {
     console.log(`${job}: ${applicants.filter((a) => a.job_id === job).length} applicants · prefilter pass ${count(job, 'prefilter', 'pass')}, fail ${count(job, 'prefilter', 'fail')}, review ${count(job, 'prefilter', 'review')}`);
   }
   console.log(`role-switch rows: ${rs.length} · email samples: ${manifest.length} · answer-key lint: ok`);

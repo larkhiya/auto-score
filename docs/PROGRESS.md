@@ -2,9 +2,9 @@
 **Current phase:** 7 — Add any role from a job description · **Target finish:** straight-through build (D-008) · **Pace:** continuous; learner now doing retrieval questions at session start
 
 ## Now / Next / Blocked
-- **Now:** Phase 7: WF-05 job-profile builder (n8n AI nodes), Administrative Assistant JD + biased JD, approval page, JOB_NOT_APPROVED path
+- **Now:** Phase 7: everything done except the role-switch set (about 80 LLM calls, waiting for the learner's go-ahead)
 - **Next:** Phase 8 full eval incl. v1 vs v2 on identical data
-- **Blocked:** nothing
+- **Blocked:** role-switch run needs the learner's OK (CLAUDE.md: more than 20 LLM calls)
 - **Notes:** CRM resets under D-022 on 2026-10-17 (dedupe proof; dataset recalibrations L-005). The dataset was regenerated after the v2 run (long-CV dates), so reseed before Phase 8. The n8n Gemini credential is named "Google Gemini(PaLM) Api account".
 
 ## Phases
@@ -17,7 +17,7 @@
 | 4 | Boolean pre-filter | ✅* | 2026-10-17 | 2026-10-17 | phase-4 |
 | 5 | AI screening and scoring | ✅* | 2026-10-17 | 2026-10-17 | phase-5 |
 | 6 | CRM write-back and error handling | ✅* | 2026-10-17 | 2026-10-17 | phase-6 |
-| 7 | Add any role from a job description | ⬜ | straight-through | | |
+| 7 | Add any role from a job description | 🟨 | straight-through | | |
 | 8 | Prove it works every time | ⬜ | straight-through | | |
 | 9 | Package for portfolio and interviews | ⬜ | straight-through | | |
 
@@ -77,12 +77,39 @@ Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items m
 - [x] Real outage (CRM container stopped after 2 of 6): 1 final + 5 ERROR with dead letters, 6 in = 6 out; replay moved all 5 to final; 6/6 agree with the answer key (`reports/chaos-2026-10-17T15-54-24-365Z.json`)
 - Observation: a stopped container times out (10 s per try) rather than refusing, so the claim retries lasted about a minute and the CRM was back in time for the ERROR mark. Retry budget vs outage length decides "dead letter" vs "slow success".
 
+**Phase 7**
+- [x] WF-05: CRM `job.draft_requested` → n8n AI chain (Gemini 3.8 Flash + Structured Output Parser, D-029) → code assembles the profile, runs the contract + §5.5 checks and the bias check → DRAFT with errors and flags; one repair loop; a broken draft is recorded as failed and can be re-drafted
+- [x] CRM job page: paste a JD, review criteria and must-haves beside their JD quotes, flags highlighted, edit, approve (freezes the version), re-draft
+- [x] Biased JD: 9 flags; Approve is disabled in the UI and refused by the server while any flag is unresolved (`tests/jobprofile.test.js`)
+- [x] Malformed drafts rejected: weights summing to 90, an unregistered check, a quote not in the JD, a must-have without a JD quote (`tests/builder.test.js`, `tests/jobprofile.test.js`)
+- [x] Builder consistency over 3 drafts of the Admin JD: 3/3 valid; 3–4 of 5 criteria matched, mean weight difference 1.7–2.5, must-have overlap 0.5–0.6 (moderate; `reports/builder-consistency-admincheck-2026-10-17.json`)
+- [x] Administrative Assistant v1 approved by the learner in the CRM (`approved_by: jcw`, 2026-10-17T16:22:39Z UTC) and exported to `config/jobs/admin.v1.json` (`scripts/export-profile.js`)
+- [x] 31 Admin applicants from the approved profile, on their own random stream: the 222 csr/sdr rows and the role-switch set are byte-identical. Pre-filter matches the answer key on **253/253** (`tests/prefilter.test.js`)
+- [x] Live pipeline: **31/31 agree with the answer key** (app_000223–253). 19 scored with 38 LLM calls and 0 repairs; 12 decided by the pre-filter with 0 LLM calls. Strong 100, medium 65, thin 11.25–16.25; name-swap pair 65/65; every evidence quote verified
+- [x] Every score records its `job_profile_version` (31/31 Admin records: v1)
+- [x] JOB_NOT_APPROVED: an application to the unapproved `carebias` job → NEEDS_REVIEW `JOB_NOT_APPROVED`, 0 LLM calls (app_000254)
+- [x] No code changes for the new role: the Admin work touches only `data/`, `scripts/`, `tests/prefilter.test.js` and `config/jobs/admin.v1.json`. `git diff --stat HEAD -- src prompts/screening_v1.md prompts/screening_v2.md workflows contracts crm` is empty. Since `phase-6`, the screening workflows changed only through re-bundled shared modules from part 1 (the builder prompt added to the prompt registry; the JobProfile 1.1.0 validator). Screening logic and screening prompts are unchanged. n8n matches git
+- [ ] Role-switch set: at least 18/20 CVs move in the expected direction (about 80 LLM calls; ask first)
+- [ ] Optional bulk re-score when a new version is approved (not built; optional in the brief)
+- [ ] C-33 at can-explain (deferred, ⏭)
+- Finding (D-030): the approved keyword list has no "Executive Assistant", "Personal Assistant" or "Secretary", so a strong PA is rejected (`admin-022`). The draft also turned two JD requirements into weighted criteria rather than must-haves: Office/Excel became `office_software_proficiency` (weight 25), and "clear written and spoken English" has no check at all. Both are the reviewer's call; the fix is a v2.
+- Caveat: Admin scores are flat (every strong 100, every medium 65) because the personas are templates. That shows the anchors are applied consistently, not that scoring is accurate on varied CVs. Phase 8 should add varied CVs.
+
 ## Learner review pass (D-008), collected as we go
 - Concepts deferred: see LEARNING (`⏭`)
-- Decisions to confirm: D-014 to D-019 (`pending learner review`)
+- Decisions to confirm: D-014 to D-021, D-023 to D-025, D-028 to D-030 (`pending learner review`)
+- Profile review: the Admin v1 gaps above (missing PA titles, English, Office as a criterion rather than a must-have). Decide whether to make a v2
 - Exercises: hello-items item-count prediction (Phase 0); find a loose field in the ScoreCard schema (Phase 1); spot-check 10 answer-key rows (Phase 2)
 
 ## Session log (newest first)
+### S-02 (continued) · 2026-10-18 · Phase 7 (part 2)
+- Done: confirmed the learner's Admin approval in the CRM database; `scripts/export-profile.js`; Admin personas (`scripts/lib/personas-admin.js`, calibrated to the approved anchors, L-005); generator extended on its own random stream; answer-key test covers admin; seeded and screened 31 Admin applicants; JOB_NOT_APPROVED check; no-code-change diff
+- Verified (evidence): see the Phase 7 checklist; 158 unit tests; n8n matches git
+- Not yet verified: the role-switch set; varied (non-template) Admin CVs
+- Decisions: D-029, D-030 · Lessons: L-011
+- LLM calls this part: 38 (free tier, $0)
+- Next: role-switch run (needs the go-ahead), then tag `phase-7` and Phase 8
+
 ### S-02 (continued) · 2026-10-17 · Phase 6
 - Done: `src/deadletter.js` (+ tests), `dead_letters` Data Table, WF-91, WF-90, caller dead-lettering in WF-01/WF-03/WF-02, replay events, `scripts/replay-dlq.js`, `scripts/chaos-run.js`, `n8n:drift`
 - Verified (evidence): 3 chaos reports (above); replays 3/3 and 5/5; 152 unit tests; n8n matches git
