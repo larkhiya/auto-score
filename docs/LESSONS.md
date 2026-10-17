@@ -14,13 +14,25 @@ Template:
 
 ---
 
+## L-006 · The evidence check rejected real quotes because of list markers
+- **Date:** 2026-10-17 · **Phase:** 5 · **Who:** Claude
+- **What happened:** in the v1 20-per-role run, the name-swap pair went to NEEDS_REVIEW (EVIDENCE_NOT_VERIFIED). One of the two "unverified" quotes was genuine: the model quoted two adjacent bullets as one passage and left out the `- ` marker between them.
+- **Symptom:** "quote not found" on text I could see in the CV.
+- **Root cause:** `containsQuote` compared the raw layout. A line-start list marker is formatting, but my normalizer treated it as content. I hadn't tested a quote that spans lines. (The other unverified quote was genuinely stitched from two different jobs, and was correctly rejected.)
+- **Fix:** `stripListMarkers` before matching; the CV fingerprint is unchanged. Test: an adjacent-bullet quote passes and a cross-job stitched quote still fails. Reproduced first with `data/out/quote-check.js` on the exact text WF-10 saw (L-004 applied).
+- **Prevention rule:** covered by L-004 (reproduce on the real input before changing code); no new rule.
+- **Concept it illustrates:** C-18 (grounding: verify the evidence, but verify it fairly)
+
 ## L-005 · Synthetic "medium" CVs didn't match their answer-key band
-- **Date:** 2026-10-18 · **Phase:** 5 · **Who:** Claude
+- **Date:** 2026-10-17 · **Phase:** 5 · **Who:** Claude
 - **What happened:** in the first smoke run, both "medium" applicants scored 26–33 (NOT_A_FIT) where the answer key said MAYBE (55–74). After the first fix the CSR medium overshot to 81.25, above the strong applicant.
 - **Symptom:** 4/5 agreement per role, and every miss was a medium persona.
 - **Root cause:** I wrote the medium templates from intuition ("some experience") and never checked them against the rubric anchors. The anchors reward specifics: a daily volume earns customer-facing 4, and any number earns results 3. So 2–3 generic bullets scored about 30, and adding volumes and numbers pushed it to about 80. The answer key's intent was right; the CV text didn't embody it.
-- **Fix:** each tier's template now documents its intended anchor level per criterion and the expected weighted total (`scripts/lib/personas.js`). Medium CSR keeps channels and one tool, but has no daily volume and names a metric without a number. Learner chose this over lowering the threshold or relabelling (2026-10-18). Verified: smoke set 12/12, with mediums at 58.75–71.25; pre-filter still 222/222.
+- **Fix:** each tier's template now documents its intended anchor level per criterion and the expected weighted total (`scripts/lib/personas.js`). Medium CSR keeps channels and one tool, but has no daily volume and names a metric without a number. Learner chose this over lowering the threshold or relabelling (2026-10-17). Verified: smoke set 12/12, with mediums at 58.75–71.25; pre-filter still 222/222.
 - **Guard against overfitting:** the change was reasoned from the anchors, not tuned to one score. The 20-per-role run is the wider check.
+- **Recurred (same root cause) in the 20-per-role run:**
+  - "Strong" SDR CVs sampled their bullets randomly and sometimes lacked the quota bullet (20% weight), scoring MAYBE. Strong templates now always include the two highest-weighted criteria.
+  - The 29k-character CV cycled its older job dates through 15 years, so they genuinely overlapped. The model correctly flagged INCONSISTENT_DATES; dates are now sequential.
 - **Prevention rule:** before trusting a synthetic answer key for an AI rubric, score each persona template against the anchors by hand and write the expected range next to it. → promoted to Learned Rules: yes
 - **Concept it illustrates:** C-08 (ground truth), C-27 (evals)
 

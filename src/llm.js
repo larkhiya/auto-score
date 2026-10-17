@@ -14,16 +14,20 @@ const S = {
 };
 const QUOTE = 'exact verbatim excerpt from the CV';
 
+// List caps keep extraction of very long CVs inside the output budget (a 29k-character CV hit
+// MAX_TOKENS twice without them). They steer the model only; the contract doesn't limit lengths.
+const CAPS = { experience: 10, skills: 15, tools: 12, achievements: 12, languages: 6 };
+
 function candidateProfileSchema() {
-  const named = S.arr(S.obj({ name: S.str(), evidence_quote: S.str(QUOTE) }));
+  const named = (max) => S.arr(S.obj({ name: S.str(), evidence_quote: S.str(QUOTE) }), { maxItems: max });
   return S.obj({
     experience: S.arr(S.obj({
       title: S.str(), organization: S.nstr(), duration_months: S.num({ nullable: true }), summary: S.str(), evidence_quote: S.str(QUOTE),
-    })),
-    skills: named,
-    tools: named,
-    achievements: S.arr(S.obj({ description: S.str(), metric: S.nstr('the number, if any'), evidence_quote: S.str(QUOTE) })),
-    languages: named,
+    }), { maxItems: CAPS.experience }),
+    skills: named(CAPS.skills),
+    tools: named(CAPS.tools),
+    achievements: S.arr(S.obj({ description: S.str(), metric: S.nstr('the number, if any'), evidence_quote: S.str(QUOTE) }), { maxItems: CAPS.achievements }),
+    languages: named(CAPS.languages),
     total_experience_months: S.num({ nullable: true }),
   });
 }
@@ -63,4 +67,4 @@ function parseModelJson(text) {
 const toCandidateProfile = (modelJson) => ({ schema_version: '1.0.0', ...modelJson });
 const toScoreCard = (modelJson, profile) => ({ schema_version: '1.0.0', job_id: profile.job_id, job_profile_version: profile.version, ...modelJson });
 
-module.exports = { candidateProfileSchema, scoreCardSchema, parseModelJson, toCandidateProfile, toScoreCard };
+module.exports = { CAPS, candidateProfileSchema, scoreCardSchema, parseModelJson, toCandidateProfile, toScoreCard };

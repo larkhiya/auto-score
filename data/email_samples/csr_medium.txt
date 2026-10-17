@@ -1,19 +1,19 @@
-HIRO LOPEZ
-hiro.lopez@example.test | +1-555-0134 | Brookfield
+MORGAN VARGA
+morgan.varga@example.test | +1-555-0152 | Fairmont
 
 SUMMARY
 Friendly and reliable, with experience helping customers in person and on the phone.
 
 EXPERIENCE
-Customer Service Representative, Juniper Bank Services (2025–present)
-- Answered customer calls and live chats about orders, deliveries and returns.
-- Replied to customer emails and logged every case in Zendesk so nothing was lost between shifts.
-- Handled complaints and refund requests, passing difficult cases to a supervisor.
-- Went through my customer satisfaction results with my team lead each month.
+Front Desk Agent, Riverside Hotel (2024–present)
+- Checked in guests and answered phone and email booking requests in Cloudbeds.
+- Dealt with billing mistakes and noise complaints, escalating refunds to the manager.
+- Wrote replies to online guest reviews on behalf of the front desk team.
+- Guest review scores were shared with the team every month.
 
-Warehouse Picker, Greenfield Logistics (2024–2025)
-- Picked and packed 150+ orders per shift with 99.5% accuracy.
-- Operated pallet jacks and kept stock counts up to date.
+Data Entry Clerk, Pioneer Records (2023–2024)
+- Entered and checked 500+ records a day with high accuracy.
+- Scanned and filed paper documents.
 
 SKILLS
 Microsoft Office, Teamwork, Patience
@@ -22,4 +22,4 @@ LANGUAGES
 English
 
 EDUCATION
-Diploma in Office Administration
+Associate degree in Business

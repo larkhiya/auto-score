@@ -12,8 +12,30 @@ Under D-008, Claude makes design choices during the straight-through build and m
 
 ---
 
+## D-027 · Cross-applicants stay NOT_A_FIT in the answer key
+- **Date:** 2026-10-17 · **Phase:** 5 · **Status:** accepted
+- **Decided by:** learner (Claude offered "either band is acceptable" as the alternative)
+- **Context:** salespeople with a past retail job applying for Customer Service score MAYBE (58–65): the model credits their customer-facing and phone experience.
+- **Decision:** keep NOT_A_FIT. Sales results shouldn't count for a support role. The disagreement stays visible in the evals as a known pattern. A stricter CSR rubric (profile v2) is the lever if it matters, not a relabelled answer key.
+- **Revisit if:** recruiters say these candidates are worth a look (then it's a rubric decision, not an answer-key edit).
+
+## D-026 · Prompt screening_v2, a strict evidence check, and capped extraction
+- **Date:** 2026-10-17 · **Phase:** 5 · **Status:** accepted
+- **Decided by:** learner (chose "strict + prompt v2" over accepting multi-part quotes; Claude recommended it)
+- **Context:** the v1 20-per-role run agreed 32/40. Misses came from:
+  - quotes spanning bullets (part matcher bug L-006, part genuine stitching across jobs)
+  - a 29k-character CV that made extraction hit MAX_TOKENS twice
+  - strong SDR CVs missing their quota bullet (generator, L-005)
+  - cross-applicants (D-027)
+- **Decision:**
+  - The matcher ignores list markers, so a quote across ADJACENT bullets is real evidence. Quotes must still be contiguous.
+  - `prompts/screening_v2.md`: one line or one sentence per quote, never joined across lines or roles; extraction lists capped (10 roles, 15 skills, 12 tools, 12 achievements, 6 languages), also as `maxItems` in the response schema.
+  - The prompt version is set in `src/settings.js` and recorded on every result. v1 is kept unchanged for the Phase 8 comparison.
+- **Evidence:** v2 run on 20 per role agreed 37/40, with 0 repairs, 0 unverified-evidence reviews, long CVs extracted fine, and identical name-swap scores. Not a clean A/B (the generator was fixed in between); Phase 8 compares v1 and v2 on identical data.
+- **Revisit if:** verbatim-quote failures rise again, or legitimate multi-line evidence keeps being rejected.
+
 ## D-025 · Screening calls Gemini over HTTP in one sub-workflow (WF-12); n8n AI nodes for the profile builder
-- **Date:** 2026-10-18 · **Phase:** 5 · **Status:** pending learner review
+- **Date:** 2026-10-17 · **Phase:** 5 · **Status:** pending learner review
 - **Decided by:** Claude (D-008; brief §5.2 default was "AI nodes first, HTTP as fallback")
 - **Options:**
   - A: n8n LLM Chain + Gemini Chat Model + Structured Output Parser (+ shows the AI nodes; − the parser adds format instructions instead of using Gemini's native schema-constrained output, token usage is harder to get, and retry behaviour is n8n's)

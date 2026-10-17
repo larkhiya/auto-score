@@ -115,7 +115,9 @@ function longCv(p, role) {
   const older = [];
   for (let i = 0; i < 30; i++) {
     const j = role === 'csr' ? P.csrStrongJob(r, 1) : P.sdrStrongJob(r, 1);
-    older.push(`${j.title}, ${j.org} (${1995 + (i % 15)}–${1996 + (i % 15)})`, ...j.bullets.map((b) => `- ${b}`), '');
+    // Sequential, non-overlapping years before the recent roles (cycling years made the dates
+    // genuinely inconsistent, and the model rightly flagged INCONSISTENT_DATES).
+    older.push(`${j.title}, ${j.org} (${2016 - i}–${2017 - i})`, ...j.bullets.map((b) => `- ${b}`), '');
   }
   const projects = Array.from({ length: 120 }, (_, i) => `- Project ${i + 1}: documented the process, shared results with the team and kept notes for future hires.`);
   return strong + ['', 'EARLIER EXPERIENCE', ...older, 'PROJECTS AND TRAINING', ...projects].join('\n') + '\n';

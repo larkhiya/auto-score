@@ -53,21 +53,26 @@ const UNRELATED_JOBS = [
   { title: 'Assembly Technician', org: 'Vector Components', bullets: ['Assembled circuit boards following technical drawings.', 'Ran quality checks and logged defects.'] },
 ];
 
+// STRONG tier (L-005): always evidence for the two highest-weighted csr criteria (customer-facing 25,
+// problem solving 20), plus a sample of the rest. Without the guarantee a "strong" CV could randomly
+// lack them and score MAYBE.
 function csrStrongJob(r, years) {
   const tool = r.pick(SUPPORT_TOOLS);
   const a = r.int(8, 12);
-  const bullets = r.sample([
+  const always = [
     `Handled ${r.int(45, 90)} inbound calls, chats and emails per day for a ${r.pick(PRODUCTS_SUPPORT)}.`,
+    'De-escalated upset customers and resolved escalated tier-2 cases with the billing team.',
+  ];
+  const rest = r.sample([
     `Kept CSAT at ${r.int(92, 98)}% over ${r.int(12, 30)} months, above the team target of 90%.`,
     `Cut average handle time from ${a} to ${a - r.int(2, 4)} minutes by building troubleshooting checklists.`,
-    'De-escalated upset customers and resolved escalated tier-2 cases with the billing team.',
     `Wrote ${r.int(10, 40)} knowledge-base articles and response macros used by the whole support team.`,
     `Worked tickets in ${tool}, wrote clear case notes and built ${r.int(5, 15)} macros for common issues.`,
     `Maintained ${r.int(85, 95)}% first-contact resolution and a ${r.int(90, 99)}% average QA score.`,
     `Trained ${r.int(3, 12)} new agents on ticket workflow, tone and escalation rules.`,
     'Collected customer feedback and reported recurring bugs to the product team.',
-  ], r.int(4, 6));
-  return { title: r.pick(['Customer Support Specialist', 'Senior Customer Service Representative', 'Tier 2 Support Agent', 'Customer Care Team Lead', 'Contact Centre Agent']), org: r.pick(SUPPORT_ORGS), years, bullets };
+  ], r.int(2, 4));
+  return { title: r.pick(['Customer Support Specialist', 'Senior Customer Service Representative', 'Tier 2 Support Agent', 'Customer Care Team Lead', 'Contact Centre Agent']), org: r.pick(SUPPORT_ORGS), years, bullets: r.shuffle([...always, ...rest]) };
 }
 
 // MEDIUM tier, calibrated against the csr anchors (L-005). The target is a total of about 55-70
@@ -100,18 +105,21 @@ function csrMediumJob(r, years) {
   return { title: r.pick(s.titles), org: r.pick(s.orgs), years, bullets: s.bullets(r, r.pick(s.tools)) };
 }
 
+// STRONG tier (L-005): always evidence for the two highest-weighted sdr criteria (outbound 25, quota 20).
 function sdrStrongJob(r, years) {
-  const bullets = r.sample([
+  const always = [
     `Made ${r.int(60, 110)} cold calls a day and booked ${r.int(12, 25)} qualified meetings per month for ${r.int(2, 5)} account executives.`,
     `Reached ${r.int(105, 140)}% of quarterly meetings quota for ${r.int(3, 6)} consecutive quarters; ranked #${r.int(1, 3)} of ${r.int(10, 30)} reps.`,
+  ];
+  const bullets = [...always, ...r.sample([
     `Built multi-step outbound email sequences in ${r.pick(SALES_TOOLS)} with a ${r.int(8, 18)}% reply rate.`,
     `Researched target accounts in LinkedIn Sales Navigator and qualified leads using ${r.pick(['BANT', 'MEDDIC'])} before handover.`,
     `Handled objections on price, timing and incumbents, turning ${r.int(25, 45)}% of first calls into discovery meetings.`,
     `Generated $${r.int(400, 1500)}K in pipeline in one year selling a ${r.pick(PRODUCTS_SALES)} to ${r.pick(BUYERS)}.`,
     `Logged all activity in ${r.pick(SALES_CRMS)} and kept pipeline stages accurate for weekly forecasts.`,
     `Wrote call scripts and trained ${r.int(2, 6)} new SDRs on prospecting and objection handling.`,
-  ], r.int(4, 6));
-  return { title: r.pick(['Sales Development Representative', 'Senior SDR', 'Business Development Representative', 'Outbound SDR Team Lead']), org: r.pick(SALES_ORGS), years, bullets };
+  ], r.int(2, 4))];
+  return { title: r.pick(['Sales Development Representative', 'Senior SDR', 'Business Development Representative', 'Outbound SDR Team Lead']), org: r.pick(SALES_ORGS), years, bullets: r.shuffle(bullets) };
 }
 
 // MEDIUM tier, calibrated against the sdr anchors (L-005), target about 55-70 (MAYBE):

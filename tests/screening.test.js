@@ -57,6 +57,15 @@ test('verified quotes keep their score; invented ones are zeroed', () => {
   assert.equal(out.needs_review, false, 'one unverified quote: zeroed, not reviewed');
   assert.deepEqual(out.nice_to_haves_found.map((n) => n.id), ['knowledge_base_authoring']);
 });
+test('a quote spanning two ADJACENT bullets is real evidence; one stitched from separate places is not (L-006)', () => {
+  const cv = 'Agent, Acme (2023–present)\n- Booked 16 meetings a month.\n- Built email sequences in Apollo.\n\nLead, Beta (2021–2023)\n- Logged all activity in Salesforce.';
+  const out = verifyScoreCard({ criteria: [
+    { criterion_id: 'adjacent', score: 3, evidence_quote: 'Booked 16 meetings a month. Built email sequences in Apollo.', rationale: 'x' },
+    { criterion_id: 'stitched', score: 3, evidence_quote: 'Logged all activity in Salesforce. Built email sequences in Apollo', rationale: 'x' },
+  ], nice_to_haves_found: [] }, cv);
+  assert.deepEqual(out.criteria.map((c) => c.evidence_verified), [true, false]);
+});
+
 test('two or more invented quotes send the record to review', () => {
   const out = verifyScoreCard(card([
     { criterion_id: 'a', score: 3, evidence_quote: 'Managed a team of 12', rationale: 'x' },
@@ -122,11 +131,28 @@ test('criterion ids must match the profile exactly', () => {
 });
 
 // ------------------------------------------------------------------ prompts (C-21)
-test('the prompt template contains no role-specific words (role-agnostic engine)', () => {
-  const md = fs.readFileSync(path.join(__dirname, '..', 'prompts', 'screening_v1.md'), 'utf8').toLowerCase();
+test('no screening prompt version contains role-specific words (role-agnostic engine)', () => {
+  const dir = path.join(__dirname, '..', 'prompts');
   const roleWords = ['customer', 'sales', 'quota', 'prospect', 'support', 'ticket', 'csat', 'cold call', 'retail', 'call cent', 'sdr', 'csr', 'representative', 'pipeline'];
-  const found = roleWords.filter((w) => md.includes(w));
-  assert.deepEqual(found, [], `role words in the template: ${found.join(', ')}`);
+  for (const f of fs.readdirSync(dir).filter((x) => x.startsWith('screening_'))) {
+    const md = fs.readFileSync(path.join(dir, f), 'utf8').toLowerCase();
+    const found = roleWords.filter((w) => md.includes(w));
+    assert.deepEqual(found, [], `role words in ${f}: ${found.join(', ')}`);
+  }
+});
+
+test('the configured prompt version exists and every version has the same sections', () => {
+  const { SCREENING_PROMPT_VERSION } = require('../src/settings');
+  assert.ok(prompt.versions().includes(SCREENING_PROMPT_VERSION));
+  const gen = require('../src/generated/prompts');
+  const keys = (v) => Object.keys(gen[v]).sort().join(',');
+  for (const v of prompt.versions()) assert.equal(keys(v), keys('screening_v1'), v);
+});
+
+test('extraction lists are capped so long CVs fit the output budget', () => {
+  const s = llm.candidateProfileSchema();
+  assert.equal(s.properties.experience.maxItems, 10);
+  assert.equal(s.properties.skills.maxItems, 15);
 });
 test('rendering fills every placeholder and defangs CV delimiters', () => {
   const cp = llm.toCandidateProfile({ experience: [], skills: [], tools: [], achievements: [], languages: [], total_experience_months: null });

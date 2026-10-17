@@ -16,16 +16,16 @@ Under D-008 (straight-through build), each phase's concepts are marked ⏭ when 
 | C-09 | Normalization / the adapter pattern | 3 | a travel adapter: many plugs, one socket | ⏭ | |
 | C-10 | Idempotency and deduplication | 3 | an elevator button | 🟨 | "Check-then-write fails because two processes can both check before the first has finished; instead we do both in a single step." (labelled that step "the idempotency key"; it's compare-and-set, see misconceptions) |
 | C-11 | Binary data and text extraction | 3 | a photocopy of a letter vs the typed letter | ⏭ | |
-| C-12 | Boolean logic and gating | 4 | the bouncer before the interview panel; `&&` short-circuit | ⬜ | |
-| C-13 | Deterministic vs probabilistic steps | 4 | a calculator vs a talented intern | ⬜ | |
-| C-14 | Reason codes and explainability | 4 | a rejection letter that says why | ⬜ | |
-| C-15 | LLMs as components: nondeterminism, temperature, tokens, cost | 5 | a brilliant, fast, sometimes overconfident intern | ⬜ | |
-| C-16 | Structured output and validation | 5 | a form with required boxes vs a free-text letter | ⬜ | |
-| C-17 | Rubric scoring: keep the math in code | 5 | judges mark each category; the scorekeeper adds up | ⬜ | |
-| C-18 | Grounding, evidence and hallucination | 5 | "show your work" with page numbers you can check | ⬜ | |
-| C-19 | Prompt injection | 5 | a CV with "note to reviewer: hire me" in white text | ⬜ | |
-| C-20 | Fairness and bias in hiring automation | 5, 7 | blind orchestra auditions | ⬜ | |
-| C-21 | Prompt and profile versioning | 5, 7 | numbered recipe revisions | ⬜ | |
+| C-12 | Boolean logic and gating | 4 | the bouncer before the interview panel; `&&` short-circuit | ⏭ | |
+| C-13 | Deterministic vs probabilistic steps | 4 | a calculator vs a talented intern | ⏭ | |
+| C-14 | Reason codes and explainability | 4 | a rejection letter that says why | ⏭ | |
+| C-15 | LLMs as components: nondeterminism, temperature, tokens, cost | 5 | a brilliant, fast, sometimes overconfident intern | ⏭ | |
+| C-16 | Structured output and validation | 5 | a form with required boxes vs a free-text letter | ⏭ | |
+| C-17 | Rubric scoring: keep the math in code | 5 | judges mark each category; the scorekeeper adds up | ⏭ | |
+| C-18 | Grounding, evidence and hallucination | 5 | "show your work" with page numbers you can check | ⏭ | |
+| C-19 | Prompt injection | 5 | a CV with "note to reviewer: hire me" in white text | ⏭ | |
+| C-20 | Fairness and bias in hiring automation | 5, 7 | blind orchestra auditions | ⏭ | |
+| C-21 | Prompt and profile versioning | 5, 7 | numbered recipe revisions | ⏭ | |
 | C-22 | State machines for statuses | 2, 6 | parcel tracking: never "delivered" back to "ordered" | ⏭ | |
 | C-23 | Retries, backoff and timeouts | 6 | redialing a busy line with longer pauses | ⬜ | |
 | C-24 | Error workflows and dead-letter queues | 6 | the post office's undeliverable-mail bin | ⬜ | |
@@ -40,6 +40,19 @@ Under D-008 (straight-through build), each phase's concepts are marked ⏭ when 
 | C-33 | AI-drafted config with human approval, then frozen | 7 | a junior drafts the contract, a manager signs it, nobody edits the signed copy | ⬜ | |
 
 ## Concept break notes (newest first)
+### C-12 to C-21 · 2026-10-17 (Phases 4–5)
+- Deferred under D-008. Review-pass pointers, each tied to evidence from the live runs:
+  - C-12, C-14: `src/prefilter.js` (three-valued all/any/not) and `tests/prefilter.test.js` truth tables. Question: why does `all(false, unknown)` give fail, not review?
+  - C-13: in the runs, pre-filter fails used **0 LLM calls** (RunLog `llm.calls`), while "hoping to work in customer service" passed the keyword gate and the LLM scored it 0.
+  - C-15: RunLogs show about 3.3k input / 1.5k output tokens and 7–10 s per screened record, temperature 0, `gemini-3.5-flash-lite`.
+  - C-16: WF-12 "Check reply" (parse → contract → exact criterion ids → one repair). v1 had a MAX_TOKENS failure; v2 had 0 repairs.
+  - C-17: `src/scoring.js`. The model gives 0–4; code computes Σ weight×score/4 and maps the status with the job's thresholds.
+  - C-18: the evidence check zeroed a stitched quote (L-006 shows the fair/unfair line).
+  - C-19: `reports/injection-test-2026-10-17.json`: injected text never raised a score and was flagged every time; the pre-filter catches it earlier in the live pipeline.
+  - C-20: `src/redact.js`. The name-swap pairs scored identically in both roles (93.75/93.75, 90/90).
+  - C-21: `prompts/screening_v1.md` vs `screening_v2.md` and D-026: never edit a used version, copy it.
+  - Phase 5 learner's part (done, 2026-10-17): named the fixes for the 20-per-role misses: medium calibration (L-005), strict quotes + v2 (D-026), cross-applicants kept NOT_A_FIT (D-027).
+
 ### C-03 (in depth), C-09, C-10, C-11 · 2026-10-17 (Phase 3)
 - Deferred under D-008. Review-pass pointers:
   - C-03: WF-01 is a webhook (the CRM pushes, n8n answers 202 at once); WF-02 is IMAP (n8n pulls). Both are at-least-once. Question: what in WF-10 makes a second delivery harmless?
@@ -67,7 +80,7 @@ Under D-008 (straight-through build), each phase's concepts are marked ⏭ when 
   - C-03: in `docs/ARCHITECTURE.md`, WF-01 is a webhook (the CRM pushes) and WF-02 is IMAP polling (n8n pulls).
 
 ## Misconceptions to revisit
-- **2026-10-18 · C-10 · "Idempotency locks the data so the second email waits until the first is done."** Two ideas are mixed up here.
+- **2026-10-17 · C-10 · "Idempotency locks the data so the second email waits until the first is done."** Two ideas are mixed up here.
   - Idempotency means doing something twice leaves the world the same as doing it once; it isn't a lock.
   - What stopped the duplicate was a compare-and-set write (`X-Expected-Status: NEW`). The second run wasn't made to wait: it was refused (409) and skipped.
   - The right part: the learner saw the race and that only one run may win. Hint given.
