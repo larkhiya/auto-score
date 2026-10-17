@@ -1,0 +1,7 @@
+# Normalise line endings so files exported from Linux containers don't churn on Windows (audit item 6)
+* text=auto eol=lf
+
+*.pdf binary
+*.docx binary
+*.png binary
+*.jpg binary

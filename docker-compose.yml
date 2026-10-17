@@ -1,0 +1,47 @@
+# Auto-Score stack. Containers reach each other by service name (n8n, crm, greenmail), never localhost.
+# Values come from .env (run `npm run init-env` first).
+name: auto-score
+
+services:
+  n8n:
+    # Pinned (D-006). 2.43.7 = the `stable` tag on 2026-10-16.
+    image: docker.n8n.io/n8nio/n8n:2.43.7
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?run npm run init-env}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Etc/UTC}
+      TZ: ${GENERIC_TIMEZONE:-Etc/UTC}
+      N8N_HOST: localhost
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://localhost:5678/
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_PERSONALIZATION_ENABLED: "false"
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5678/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  greenmail:
+    # Local test mail server (D-011): SMTP 3025, IMAP 3143. Test data only.
+    image: greenmail/standalone:2.1.14
+    restart: unless-stopped
+    ports:
+      - "3025:3025"
+      - "3143:3143"
+    environment:
+      GREENMAIL_OPTS: >-
+        -Dgreenmail.setup.test.smtp
+        -Dgreenmail.setup.test.imap
+        -Dgreenmail.hostname=0.0.0.0
+        -Dgreenmail.users.login=email
+        -Dgreenmail.users=applications:${MAIL_PASSWORD:?run npm run init-env}@autoscore.test
+
+volumes:
+  n8n_data:

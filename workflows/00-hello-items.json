@@ -1,0 +1,126 @@
+{
+  "connections": {
+    "Add experience_band": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Keep experienced (2+ years)",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Make 3 applicants": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Add experience_band",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Start (manual)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Make 3 applicants",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "name": "WF-00 Hello items",
+  "nodes": [
+    {
+      "id": "6f1c0a52-2a3e-4d8e-9b41-0d6c1f9a0b02",
+      "name": "Add experience_band",
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b7d0f0a4-3c55-4e3f-8f0e-6a1b2c3d4e51",
+              "name": "experience_band",
+              "type": "string",
+              "value": "={{ $json.years_experience >= 2 ? 'experienced' : 'entry' }}"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "position": [
+        660,
+        300
+      ],
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5
+    },
+    {
+      "id": "c2a9e7d1-8b3f-4e60-a5d4-1f2e3d4c5b63",
+      "name": "Keep experienced (2+ years)",
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a74",
+              "leftValue": "={{ $json.years_experience }}",
+              "operator": {
+                "operation": "gte",
+                "type": "number"
+              },
+              "rightValue": 2
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "looseTypeValidation": false,
+        "options": {}
+      },
+      "position": [
+        880,
+        300
+      ],
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3
+    },
+    {
+      "id": "9a8b7c6d-5e4f-4a3b-9c2d-1e0f9a8b7c85",
+      "name": "Make 3 applicants",
+      "parameters": {
+        "jsCode": "// One trigger item in, three items out: each returned object becomes one item.\n// Fictional applicants; IDs only, no names.\nreturn [\n  { json: { candidate_id: 'C-001', years_experience: 1 } },\n  { json: { candidate_id: 'C-002', years_experience: 3 } },\n  { json: { candidate_id: 'C-003', years_experience: 5 } },\n];"
+      },
+      "position": [
+        440,
+        300
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "1d2c3b4a-5f6e-4d7c-8b9a-0f1e2d3c4b96",
+      "name": "Start (manual)",
+      "parameters": {},
+      "position": [
+        220,
+        300
+      ],
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1
+    }
+  ],
+  "published": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

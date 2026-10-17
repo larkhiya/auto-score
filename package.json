@@ -1,0 +1,18 @@
+{
+  "name": "auto-score",
+  "version": "0.1.0",
+  "private": true,
+  "description": "n8n + AI applicant screening: Boolean pre-filter, LLM rubric scoring against versioned job profiles, CRM write-back.",
+  "license": "MIT",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "test": "node --test",
+    "init-env": "node scripts/init-env.js",
+    "n8n:export": "node scripts/n8n-export.js",
+    "n8n:import": "node scripts/n8n-import.js",
+    "n8n:roundtrip": "node scripts/n8n-roundtrip-check.js"
+  }
+}
