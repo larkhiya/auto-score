@@ -1,0 +1,505 @@
+{
+  "seed": 20261017,
+  "rows": [
+    {
+      "ref": "rs-01",
+      "profile": "support_heavy",
+      "expected_direction": "csr>sdr",
+      "candidate": {
+        "name": "Wen Walsh",
+        "email": "wen.walsh+rs@example.test",
+        "phone": null,
+        "location": "Pinecrest"
+      },
+      "answers": {
+        "shift_availability": "yes",
+        "languages": [
+          "English"
+        ],
+        "years_experience": 4
+      },
+      "cv": {
+        "text": "WEN WALSH\nwen.walsh@example.test | +1-555-0175 | Pinecrest\n\nSUMMARY\nSupport specialist focused on fixing customer problems quickly and clearly.\n\nEXPERIENCE\nCustomer Support Specialist, Northwind Subscriptions (2023–present)\n- Worked tickets in Intercom, wrote clear case notes and built 10 macros for common issues.\n- Trained 4 new agents on ticket workflow, tone and escalation rules.\n- Handled 55 inbound calls, chats and emails per day for a home internet service.\n- Maintained 93% first-contact resolution and a 97% average QA score.\n- De-escalated upset customers and resolved escalated tier-2 cases with the billing team.\n- Wrote 11 knowledge-base articles and response macros used by the whole support team.\n\nCashier, Harbor Home Goods (2022–2023)\n- Helped shoppers find products and processed returns.\n- Ran the register and balanced the till at the end of each shift.\n\nSKILLS\nZendesk, Live chat, De-escalation\n\nLANGUAGES\nEnglish\n\nEDUCATION\nBA in English\n\nOTHER\nOccasionally offered add-on plans and hit a small monthly sales target.\n",
+        "filename": "cv_rs_1.txt",
+        "mime": "text/plain",
+        "extraction_method": "plain_text",
+        "extraction_error": null
+      }
+    },
+    {
+      "ref": "rs-02",
+      "profile": "support_heavy",
+      "expected_direction": "csr>sdr",
+      "candidate": {
+        "name": "Kenji Eriksen",
+        "email": "kenji.eriksen+rs@example.test",
+        "phone": null,
+        "location": "Westport"
+      },
+      "answers": {
+        "shift_availability": "yes",
+        "languages": [
+          "English"
+        ],
+        "years_experience": 4
+      },
+      "cv": {
+        "text": "KENJI ERIKSEN\nkenji.eriksen@example.test | +1-555-0113 | Westport\n\nSUMMARY\nSupport specialist focused on fixing customer problems quickly and clearly.\n\nEXPERIENCE\nCustomer Support Specialist, Northwind Subscriptions (2023–present)\n- Wrote 22 knowledge-base articles and response macros used by the whole support team.\n- Trained 12 new agents on ticket workflow, tone and escalation rules.\n- Collected customer feedback and reported recurring bugs to the product team.\n- Handled 60 inbound calls, chats and emails per day for a online banking app.\n- Worked tickets in Gorgias, wrote clear case notes and built 9 macros for common issues.\n- Cut average handle time from 10 to 8 minutes by building troubleshooting checklists.\n\nCall Centre Agent, Kestrel Travel (2022–2023)\n- Handled refund requests and passed difficult cases to a supervisor.\n- Answered customer calls and emails about orders, deliveries and returns.\n- Logged customer issues in a ticketing system and followed up by email.\n\nSKILLS\nZendesk, Live chat, De-escalation\n\nLANGUAGES\nEnglish\n\nEDUCATION\nBBA in Marketing\n\nOTHER\nOccasionally offered add-on plans and hit a small monthly sales target.\n",
+        "filename": "cv_rs_2.txt",
+        "mime": "text/plain",
+        "extraction_method": "plain_text",
+        "extraction_error": null
+      }
+    },
+    {
+      "ref": "rs-03",
+      "profile": "support_heavy",
+      "expected_direction": "csr>sdr",
+      "candidate": {
+        "name": "Jonah Zhang",
+        "email": "jonah.zhang+rs@example.test",
+        "phone": null,
+        "location": "Brookfield"
+      },
+      "answers": {
+        "shift_availability": "yes",
+        "languages": [
+          "English"
+        ],
+        "years_experience": 4
+      },
+      "cv": {
+        "text": "JONAH ZHANG\njonah.zhang@example.test | +1-555-0187 | Brookfield\n\nSUMMARY\nSupport specialist focused on fixing customer problems quickly and clearly.\n\nEXPERIENCE\nContact Centre Agent, Lumen Streaming (2023–present)\n- Handled 73 inbound calls, chats and emails per day for a home internet service.\n- Trained 8 new agents on ticket workflow, tone and escalation rules.\n- Wrote 23 knowledge-base articles and response macros used by the whole support team.\n- Maintained 94% first-contact resolution and a 95% average QA score.\n\nCustomer Service Representative, Brightbox Meals (2022–2023)\n- Responded to live chat messages during evening shifts.\n- Answered customer calls and emails about orders, deliveries and returns.\n- Handled refund requests and passed difficult cases to a supervisor.\n\nSKILLS\nZendesk, Live chat, De-escalation\n\nLANGUAGES\nEnglish\n\nEDUCATION\nDiploma in Office Administration\n\nOTHER\nOccasionally offered add-on plans and hit a small monthly sales target.\n",
+        "filename": "cv_rs_3.txt",
+        "mime": "text/plain",
+        "extraction_method": "plain_text",
+        "extraction_error": null
+      }
+    },
+    {
+      "ref": "rs-04",
+      "profile": "support_heavy",
+      "expected_direction": "csr>sdr",
+      "candidate": {
+        "name": "Quinn Lopez",
+        "email": "quinn.lopez+rs@example.test",
+        "phone": null,
+        "location": "Millbrook"
+      },
+      "answers": {
+        "shift_availability": "yes",
+        "languages": [
+          "English"
+        ],
+        "years_experience": 4
+      },
+      "cv": {
+        "text": "QUINN LOPEZ\nquinn.lopez@example.test | +1-555-0129 | Millbrook\n\nSUMMARY\nSupport specialist focused on fixing customer problems quickly and clearly.\n\nEXPERIENCE\nCustomer Support Specialist, Bluebell Telecom (2023–present)\n- Cut average handle time from 11 to 7 minutes by building troubleshooting checklists.\n- Worked tickets in Freshdesk, wrote clear case notes and built 9 macros for common issues.\n- De-escalated upset customers and resolved escalated tier-2 cases with the billing team.\n- Collected customer feedback and reported recurring bugs to the product team.\n- Wrote 23 knowledge-base articles and response macros used by the whole support team.\n\nGuest Services Associate (front desk), Grand Plaza Hotel (2022–2023)\n- Helped guests with check-in, questions and complaints.\n- Answered the phone and took room bookings.\n- Sorted out billing mistakes on guest accounts.\n\nSKILLS\nZendesk, Live chat, De-escalation\n\nLANGUAGES\nEnglish\n\nEDUCATION\nDiploma in Office Administration\n\nOTHER\nOccasionally offered add-on plans and hit a small monthly sales target.\n",
+        "filename": "cv_rs_4.txt",
+        "mime": "text/plain",
+        "extraction_method": "plain_text",
+        "extraction_error": null
+      }
+    },
+    {
+      "ref": "rs-05",
+      "profile": "support_heavy",
+      "expected_direction": "csr>sdr",
+      "candidate": {
+        "name": "Jamie Osei",
+        "email": "jamie.osei+rs@example.test",
+        "phone": null,
+        "location": "Harborview"
+      },
+      "answers": {
+        "shift_availability": "yes",
+        "languages": [
+          "English"
+        ],
+        "years_experience": 4
+      },
+      "cv": {
+        "text": "JAMIE OSEI\njamie.osei@example.test | +1-555-0128 | Harborview\n\nSUMMARY\nSupport specialist focused on fixing customer problems quickly and clearly.\n\nEXPERIENCE\nCustomer Support Specialist, Juniper Bank Services (2023–present)\n- De-escalated upset customers and resolved escalated tier-2 cases with the billing team.\n- Cut average handle time from 9 to 6 minutes by building troubleshooting checklists.\n- Handled 90 inbound calls, chats and emails per day for a e-commerce marketplace.\n- Trained 3 new agents on ticket workflow, tone and escalation rules.\n- Maintained 91% first-contact resolution and a 92% average QA score.\n\nCustomer Service Representative, Cedar Health Billing (2022–2023)\n- Logged customer issues in a ticketing system and followed up by email.\n- Responded to live chat messages during evening shifts.\n\nSKILLS\nZendesk, Live chat, De-escalation\n\nLANGUAGES\nEnglish\n\nEDUCATION\nBA in Communications\n\nOTHER\nOccasionally offered add-on plans and hit a small monthly sales target.\n",
+        "filename": "cv_rs_5.txt",
+        "mime": "text/plain",
+        "extraction_method": "plain_text",
+        "extraction_error": null
+      }
+    },
+    {
+      "ref": "rs-06",
+      "profile": "support_heavy",
+      "expected_direction": "csr>sdr",
+      "candidate": {
+        "name": "Samir Abara",
+        "email": "samir.abara+rs@example.test",
+        "phone": null,
+        "location": "Harborview"
+      },
+      "answers": {
+        "shift_availability": "yes",
+        "languages": [
+          "English"
+        ],
+        "years_experience": 4
+      },
+      "cv": {
+        "text": "SAMIR ABARA\nsamir.abara@example.test | +1-555-0126 | Harborview\n\nSUMMARY\nSupport specialist focused on fixing customer problems quickly and clearly.\n\nEXPERIENCE\nSenior Customer Service Representative, Orbit Software (2023–present)\n- Handled 66 inbound calls, chats and emails per day for a SaaS billing product.\n- De-escalated upset customers and resolved escalated tier-2 cases with the billing team.\n- Cut average handle time from 8 to 6 minutes by building troubleshooting checklists.\n- Wrote 20 knowledge-base articles and response macros used by the whole support team.\n\nCashier, Lakeside Electronics (2022–2023)\n- Dealt with complaints about prices and faulty items, calling a manager when needed.\n- Helped shoppers find products and processed returns.\n\nSKILLS\nZendesk, Live chat, De-escalation\n\nLANGUAGES\nEnglish\n\nEDUCATION\nHigh school diploma\n\nOTHER\nOccasionally offered add-on plans and hit a small monthly sales target.\n",
+        "filename": "cv_rs_6.txt",
+        "mime": "text/plain",
+        "extraction_method": "plain_text",
+        "extraction_error": null
+      }
+    },
+    {
+      "ref": "rs-07",
+      "profile": "support_heavy",
+      "expected_direction": "csr>sdr",
+      "candidate": {
+        "name": "Morgan Yamada",
+        "email": "morgan.yamada+rs@example.test",
+        "phone": null,
+        "location": "Lakeview"
+      },
+      "answers": {
+        "shift_availability": "yes",
+        "languages": [
+          "English"
+        ],
+        "years_experience": 4
+      },
+      "cv": {
+        "text": "MORGAN YAMADA\nmorgan.yamada@example.test | +1-555-0173 | Lakeview\n\nSUMMARY\nSupport specialist focused on fixing customer problems quickly and clearly.\n\nEXPERIENCE\nSenior Customer Service Representative, Bluebell Telecom (2023–present)\n- De-escalated upset customers and resolved escalated tier-2 cases with the billing team.\n- Collected customer feedback and reported recurring bugs to the product team.\n- Cut average handle time from 8 to 4 minutes by building troubleshooting checklists.\n- Trained 3 new agents on ticket workflow, tone and escalation rules.\n\nCall Centre Agent, Brightbox Meals (2022–2023)\n- Logged customer issues in a ticketing system and followed up by email.\n- Answered customer calls and emails about orders, deliveries and returns.\n- Responded to live chat messages during evening shifts.\n\nSKILLS\nZendesk, Live chat, De-escalation\n\nLANGUAGES\nEnglish\n\nEDUCATION\nBBA in Marketing\n\nOTHER\nOccasionally offered add-on plans and hit a small monthly sales target.\n",
+        "filename": "cv_rs_7.txt",
+        "mime": "text/plain",
+        "extraction_method": "plain_text",
+        "extraction_error": null
+      }
+    },
+    {
+      "ref": "rs-08",
+      "profile": "support_heavy",
+      "expected_direction": "csr>sdr",
+      "candidate": {
+        "name": "Farah Brennan",
+        "email": "farah.brennan+rs@example.test",
+        "phone": null,
+        "location": "Oakridge"
+      },
+      "answers": {
+        "shift_availability": "yes",
+        "languages": [
+          "English"
+        ],
+        "years_experience": 4
+      },
+      "cv": {
+        "text": "FARAH BRENNAN\nfarah.brennan@example.test | +1-555-0160 | Oakridge\n\nSUMMARY\nSupport specialist focused on fixing customer problems quickly and clearly.\n\nEXPERIENCE\nContact Centre Agent, Juniper Bank Services (2023–present)\n- Wrote 32 knowledge-base articles and response macros used by the whole support team.\n- Handled 85 inbound calls, chats and emails per day for a meal-kit subscription.\n- Cut average handle time from 11 to 7 minutes by building troubleshooting checklists.\n- Worked tickets in HubSpot Service Hub, wrote clear case notes and built 12 macros for common issues.\n- Kept CSAT at 94% over 14 months, above the team target of 90%.\n\nCall Centre Agent, Kestrel Travel (2022–2023)\n- Handled refund requests and passed difficult cases to a supervisor.\n- Responded to live chat messages during evening shifts.\n\nSKILLS\nZendesk, Live chat, De-escalation\n\nLANGUAGES\nEnglish\n\nEDUCATION\nBBA in Marketing\n\nOTHER\nOccasionally offered add-on plans and hit a small monthly sales target.\n",
+        "filename": "cv_rs_8.txt",
+        "mime": "text/plain",
+        "extraction_method": "plain_text",
+        "extraction_error": null
+      }
+    },
+    {
+      "ref": "rs-09",
+      "profile": "support_heavy",
+      "expected_direction": "csr>sdr",
+      "candidate": {
+        "name": "Rosa Varga",
+        "email": "rosa.varga+rs@example.test",
+        "phone": null,
+        "location": "Pinecrest"
+      },
+      "answers": {
+        "shift_availability": "yes",
+        "languages": [
+          "English"
+        ],
+        "years_experience": 4
+      },
+      "cv": {
+        "text": "ROSA VARGA\nrosa.varga@example.test | +1-555-0174 | Pinecrest\n\nSUMMARY\nSupport specialist focused on fixing customer problems quickly and clearly.\n\nEXPERIENCE\nTier 2 Support Agent, Bluebell Telecom (2023–present)\n- Collected customer feedback and reported recurring bugs to the product team.\n- Kept CSAT at 94% over 12 months, above the team target of 90%.\n- Trained 9 new agents on ticket workflow, tone and escalation rules.\n- Wrote 19 knowledge-base articles and response macros used by the whole support team.\n- Handled 48 inbound calls, chats and emails per day for a meal-kit subscription.\n\nGuest Services Associate (front desk), Grand Plaza Hotel (2022–2023)\n- Helped guests with check-in, questions and complaints.\n- Answered the phone and took room bookings.\n\nSKILLS\nZendesk, Live chat, De-escalation\n\nLANGUAGES\nEnglish\n\nEDUCATION\nBBA in Marketing\n\nOTHER\nOccasionally offered add-on plans and hit a small monthly sales target.\n",
+        "filename": "cv_rs_9.txt",
+        "mime": "text/plain",
+        "extraction_method": "plain_text",
+        "extraction_error": null
+      }
+    },
+    {
+      "ref": "rs-10",
+      "profile": "support_heavy",
+      "expected_direction": "csr>sdr",
+      "candidate": {
+        "name": "Uriel Ivanova",
+        "email": "uriel.ivanova+rs@example.test",
+        "phone": null,
+        "location": "Lakeview"
+      },
+      "answers": {
+        "shift_availability": "yes",
+        "languages": [
+          "English"
+        ],
+        "years_experience": 4
+      },
+      "cv": {
+        "text": "URIEL IVANOVA\nuriel.ivanova@example.test | +1-555-0138 | Lakeview\n\nSUMMARY\nSupport specialist focused on fixing customer problems quickly and clearly.\n\nEXPERIENCE\nCustomer Care Team Lead, Orbit Software (2023–present)\n- De-escalated upset customers and resolved escalated tier-2 cases with the billing team.\n- Wrote 32 knowledge-base articles and response macros used by the whole support team.\n- Handled 59 inbound calls, chats and emails per day for a home internet service.\n- Kept CSAT at 95% over 12 months, above the team target of 90%.\n- Worked tickets in HubSpot Service Hub, wrote clear case notes and built 10 macros for common issues.\n- Maintained 88% first-contact resolution and a 96% average QA score.\n\nGuest Services Associate (front desk), Grand Plaza Hotel (2022–2023)\n- Sorted out billing mistakes on guest accounts.\n- Answered the phone and took room bookings.\n\nSKILLS\nZendesk, Live chat, De-escalation\n\nLANGUAGES\nEnglish\n\nEDUCATION\nBA in Communications\n\nOTHER\nOccasionally offered add-on plans and hit a small monthly sales target.\n",
+        "filename": "cv_rs_10.txt",
+        "mime": "text/plain",
+        "extraction_method": "plain_text",
+        "extraction_error": null
+      }
+    },
+    {
+      "ref": "rs-11",
+      "profile": "prospecting_heavy",
+      "expected_direction": "sdr>csr",
+      "candidate": {
+        "name": "Jamie Yilmaz",
+        "email": "jamie.yilmaz+rs@example.test",
+        "phone": null,
+        "location": "Millbrook"
+      },
+      "answers": {
+        "shift_availability": "yes",
+        "languages": [
+          "English"
+        ],
+        "years_experience": 4
+      },
+      "cv": {
+        "text": "JAMIE YILMAZ\njamie.yilmaz@example.test | +1-555-0198 | Millbrook\n\nSUMMARY\nOutbound prospector who books meetings with new business buyers.\n\nEXPERIENCE\nSales Development Representative, Tallyhawk HR (2023–present)\n- Researched target accounts in LinkedIn Sales Navigator and qualified leads using BANT before handover.\n- Reached 137% of quarterly meetings quota for 5 consecutive quarters; ranked #1 of 15 reps.\n- Handled objections on price, timing and incumbents, turning 27% of first calls into discovery meetings.\n- Made 85 cold calls a day and booked 15 qualified meetings per month for 4 account executives.\n\nInside Sales Representative, Ledgerly (2022–2023)\n- Made phone calls to small businesses to set appointments for account managers.\n- Followed up with inbound leads by email and phone.\n\nSKILLS\nOutreach, Salesforce, Cold calling\n\nLANGUAGES\nEnglish\n\nEDUCATION\nHigh school diploma\n\nOTHER\nCovered the customer support inbox for two weeks during the holidays.\n",
+        "filename": "cv_rs_11.txt",
+        "mime": "text/plain",
+        "extraction_method": "plain_text",
+        "extraction_error": null
+      }
+    },
+    {
+      "ref": "rs-12",
+      "profile": "prospecting_heavy",
+      "expected_direction": "sdr>csr",
+      "candidate": {
+        "name": "Jonah Ueda",
+        "email": "jonah.ueda+rs@example.test",
+        "phone": null,
+        "location": "Riverton"
+      },
+      "answers": {
+        "shift_availability": "yes",
+        "languages": [
+          "English"
+        ],
+        "years_experience": 4
+      },
+      "cv": {
+        "text": "JONAH UEDA\njonah.ueda@example.test | +1-555-0185 | Riverton\n\nSUMMARY\nOutbound prospector who books meetings with new business buyers.\n\nEXPERIENCE\nBusiness Development Representative, Ledgerly (2023–present)\n- Generated $493K in pipeline in one year selling a HR software suite to small-business founders.\n- Handled objections on price, timing and incumbents, turning 42% of first calls into discovery meetings.\n- Logged all activity in Salesforce and kept pipeline stages accurate for weekly forecasts.\n- Made 106 cold calls a day and booked 14 qualified meetings per month for 3 account executives.\n- Wrote call scripts and trained 3 new SDRs on prospecting and objection handling.\n- Reached 132% of quarterly meetings quota for 6 consecutive quarters; ranked #3 of 24 reps.\n\nJunior Business Development Representative, Quartzline Freight Software (2022–2023)\n- Followed up with inbound leads by email and phone.\n- Prepared lists of local businesses to contact.\n- Tracked leads and calls in HubSpot.\n\nSKILLS\nOutreach, Salesforce, Cold calling\n\nLANGUAGES\nEnglish\n\nEDUCATION\nBBA in Marketing\n\nOTHER\nCovered the customer support inbox for two weeks during the holidays.\n",
+        "filename": "cv_rs_12.txt",
+        "mime": "text/plain",
+        "extraction_method": "plain_text",
+        "extraction_error": null
+      }
+    },
+    {
+      "ref": "rs-13",
+      "profile": "prospecting_heavy",
+      "expected_direction": "sdr>csr",
+      "candidate": {
+        "name": "Dmitri Jensen",
+        "email": "dmitri.jensen+rs@example.test",
+        "phone": null,
+        "location": "Riverton"
+      },
+      "answers": {
+        "shift_availability": "yes",
+        "languages": [
+          "English"
+        ],
+        "years_experience": 4
+      },
+      "cv": {
+        "text": "DMITRI JENSEN\ndmitri.jensen@example.test | +1-555-0113 | Riverton\n\nSUMMARY\nOutbound prospector who books meetings with new business buyers.\n\nEXPERIENCE\nOutbound SDR Team Lead, Ledgerly (2023–present)\n- Built multi-step outbound email sequences in Apollo with a 8% reply rate.\n- Logged all activity in Salesforce and kept pipeline stages accurate for weekly forecasts.\n- Handled objections on price, timing and incumbents, turning 26% of first calls into discovery meetings.\n- Wrote call scripts and trained 6 new SDRs on prospecting and objection handling.\n- Researched target accounts in LinkedIn Sales Navigator and qualified leads using BANT before handover.\n- Generated $1134K in pipeline in one year selling a HR software suite to operations leaders.\n\nTelemarketing Agent, Fieldnote Analytics (2022–2023)\n- Made phone calls to small businesses to set appointments for account managers.\n- Tracked leads and calls in HubSpot.\n- Followed up with inbound leads by email and phone.\n\nSKILLS\nOutreach, Salesforce, Cold calling\n\nLANGUAGES\nEnglish\n\nEDUCATION\nBA in Communications\n\nOTHER\nCovered the customer support inbox for two weeks during the holidays.\n",
+        "filename": "cv_rs_13.txt",
+        "mime": "text/plain",
+        "extraction_method": "plain_text",
+        "extraction_error": null
+      }
+    },
+    {
+      "ref": "rs-14",
+      "profile": "prospecting_heavy",
+      "expected_direction": "sdr>csr",
+      "candidate": {
+        "name": "Avery Zielinski",
+        "email": "avery.zielinski+rs@example.test",
+        "phone": null,
+        "location": "Riverton"
+      },
+      "answers": {
+        "shift_availability": "yes",
+        "languages": [
+          "English"
+        ],
+        "years_experience": 4
+      },
+      "cv": {
+        "text": "AVERY ZIELINSKI\navery.zielinski@example.test | +1-555-0139 | Riverton\n\nSUMMARY\nOutbound prospector who books meetings with new business buyers.\n\nEXPERIENCE\nSenior SDR, Fieldnote Analytics (2023–present)\n- Made 66 cold calls a day and booked 18 qualified meetings per month for 4 account executives.\n- Generated $742K in pipeline in one year selling a HR software suite to small-business founders.\n- Wrote call scripts and trained 6 new SDRs on prospecting and objection handling.\n- Logged all activity in Salesforce and kept pipeline stages accurate for weekly forecasts.\n\nInside Sales Representative, Quartzline Freight Software (2022–2023)\n- Prepared lists of local businesses to contact.\n- Made phone calls to small businesses to set appointments for account managers.\n\nSKILLS\nOutreach, Salesforce, Cold calling\n\nLANGUAGES\nEnglish\n\nEDUCATION\nBA in Communications\n\nOTHER\nCovered the customer support inbox for two weeks during the holidays.\n",
+        "filename": "cv_rs_14.txt",
+        "mime": "text/plain",
+        "extraction_method": "plain_text",
+        "extraction_error": null
+      }
+    },
+    {
+      "ref": "rs-15",
+      "profile": "prospecting_heavy",
+      "expected_direction": "sdr>csr",
+      "candidate": {
+        "name": "Amara Osei",
+        "email": "amara.osei+rs@example.test",
+        "phone": null,
+        "location": "Millbrook"
+      },
+      "answers": {
+        "shift_availability": "yes",
+        "languages": [
+          "English"
+        ],
+        "years_experience": 4
+      },
+      "cv": {
+        "text": "AMARA OSEI\namara.osei@example.test | +1-555-0133 | Millbrook\n\nSUMMARY\nOutbound prospector who books meetings with new business buyers.\n\nEXPERIENCE\nSenior SDR, Ledgerly (2023–present)\n- Reached 119% of quarterly meetings quota for 3 consecutive quarters; ranked #1 of 21 reps.\n- Wrote call scripts and trained 2 new SDRs on prospecting and objection handling.\n- Built multi-step outbound email sequences in HubSpot Sequences with a 8% reply rate.\n- Generated $1206K in pipeline in one year selling a HR software suite to finance managers.\n\nJunior Business Development Representative, Tallyhawk HR (2022–2023)\n- Made phone calls to small businesses to set appointments for account managers.\n- Tracked leads and calls in HubSpot.\n- Prepared lists of local businesses to contact.\n\nSKILLS\nOutreach, Salesforce, Cold calling\n\nLANGUAGES\nEnglish\n\nEDUCATION\nBSc in Psychology\n\nOTHER\nCovered the customer support inbox for two weeks during the holidays.\n",
+        "filename": "cv_rs_15.txt",
+        "mime": "text/plain",
+        "extraction_method": "plain_text",
+        "extraction_error": null
+      }
+    },
+    {
+      "ref": "rs-16",
+      "profile": "prospecting_heavy",
+      "expected_direction": "sdr>csr",
+      "candidate": {
+        "name": "Jamie Chowdhury",
+        "email": "jamie.chowdhury+rs@example.test",
+        "phone": null,
+        "location": "Harborview"
+      },
+      "answers": {
+        "shift_availability": "yes",
+        "languages": [
+          "English"
+        ],
+        "years_experience": 4
+      },
+      "cv": {
+        "text": "JAMIE CHOWDHURY\njamie.chowdhury@example.test | +1-555-0140 | Harborview\n\nSUMMARY\nOutbound prospector who books meetings with new business buyers.\n\nEXPERIENCE\nOutbound SDR Team Lead, CloudKettle (2023–present)\n- Handled objections on price, timing and incumbents, turning 34% of first calls into discovery meetings.\n- Reached 137% of quarterly meetings quota for 5 consecutive quarters; ranked #1 of 26 reps.\n- Wrote call scripts and trained 5 new SDRs on prospecting and objection handling.\n- Researched target accounts in LinkedIn Sales Navigator and qualified leads using MEDDIC before handover.\n- Generated $466K in pipeline in one year selling a accounting software to HR directors.\n\nTelemarketing Agent, Fieldnote Analytics (2022–2023)\n- Met monthly targets for booked demos most months.\n- Made phone calls to small businesses to set appointments for account managers.\n\nSKILLS\nOutreach, Salesforce, Cold calling\n\nLANGUAGES\nEnglish\n\nEDUCATION\nBBA in Marketing\n\nOTHER\nCovered the customer support inbox for two weeks during the holidays.\n",
+        "filename": "cv_rs_16.txt",
+        "mime": "text/plain",
+        "extraction_method": "plain_text",
+        "extraction_error": null
+      }
+    },
+    {
+      "ref": "rs-17",
+      "profile": "prospecting_heavy",
+      "expected_direction": "sdr>csr",
+      "candidate": {
+        "name": "Nikhil Moreau",
+        "email": "nikhil.moreau+rs@example.test",
+        "phone": null,
+        "location": "Millbrook"
+      },
+      "answers": {
+        "shift_availability": "yes",
+        "languages": [
+          "English"
+        ],
+        "years_experience": 4
+      },
+      "cv": {
+        "text": "NIKHIL MOREAU\nnikhil.moreau@example.test | +1-555-0199 | Millbrook\n\nSUMMARY\nOutbound prospector who books meetings with new business buyers.\n\nEXPERIENCE\nSenior SDR, Ledgerly (2023–present)\n- Researched target accounts in LinkedIn Sales Navigator and qualified leads using MEDDIC before handover.\n- Generated $812K in pipeline in one year selling a logistics SaaS product to small-business founders.\n- Handled objections on price, timing and incumbents, turning 36% of first calls into discovery meetings.\n- Reached 137% of quarterly meetings quota for 4 consecutive quarters; ranked #1 of 27 reps.\n\nOutbound Call Agent, Fieldnote Analytics (2022–2023)\n- Prepared lists of local businesses to contact.\n- Followed up with inbound leads by email and phone.\n\nSKILLS\nOutreach, Salesforce, Cold calling\n\nLANGUAGES\nEnglish\n\nEDUCATION\nBBA in Marketing\n\nOTHER\nCovered the customer support inbox for two weeks during the holidays.\n",
+        "filename": "cv_rs_17.txt",
+        "mime": "text/plain",
+        "extraction_method": "plain_text",
+        "extraction_error": null
+      }
+    },
+    {
+      "ref": "rs-18",
+      "profile": "prospecting_heavy",
+      "expected_direction": "sdr>csr",
+      "candidate": {
+        "name": "Rosa Rahman",
+        "email": "rosa.rahman+rs@example.test",
+        "phone": null,
+        "location": "Fairmont"
+      },
+      "answers": {
+        "shift_availability": "yes",
+        "languages": [
+          "English"
+        ],
+        "years_experience": 4
+      },
+      "cv": {
+        "text": "ROSA RAHMAN\nrosa.rahman@example.test | +1-555-0175 | Fairmont\n\nSUMMARY\nOutbound prospector who books meetings with new business buyers.\n\nEXPERIENCE\nSenior SDR, PayTrail (2023–present)\n- Reached 119% of quarterly meetings quota for 6 consecutive quarters; ranked #1 of 24 reps.\n- Made 71 cold calls a day and booked 12 qualified meetings per month for 2 account executives.\n- Logged all activity in HubSpot and kept pipeline stages accurate for weekly forecasts.\n- Wrote call scripts and trained 2 new SDRs on prospecting and objection handling.\n- Researched target accounts in LinkedIn Sales Navigator and qualified leads using BANT before handover.\n- Built multi-step outbound email sequences in Apollo with a 9% reply rate.\n\nOutbound Call Agent, Tallyhawk HR (2022–2023)\n- Prepared lists of local businesses to contact.\n- Followed up with inbound leads by email and phone.\n\nSKILLS\nOutreach, Salesforce, Cold calling\n\nLANGUAGES\nEnglish\n\nEDUCATION\nBA in English\n\nOTHER\nCovered the customer support inbox for two weeks during the holidays.\n",
+        "filename": "cv_rs_18.txt",
+        "mime": "text/plain",
+        "extraction_method": "plain_text",
+        "extraction_error": null
+      }
+    },
+    {
+      "ref": "rs-19",
+      "profile": "prospecting_heavy",
+      "expected_direction": "sdr>csr",
+      "candidate": {
+        "name": "Avery Lindqvist",
+        "email": "avery.lindqvist+rs@example.test",
+        "phone": null,
+        "location": "Oakridge"
+      },
+      "answers": {
+        "shift_availability": "yes",
+        "languages": [
+          "English"
+        ],
+        "years_experience": 4
+      },
+      "cv": {
+        "text": "AVERY LINDQVIST\navery.lindqvist@example.test | +1-555-0103 | Oakridge\n\nSUMMARY\nOutbound prospector who books meetings with new business buyers.\n\nEXPERIENCE\nOutbound SDR Team Lead, Fieldnote Analytics (2023–present)\n- Logged all activity in Salesforce and kept pipeline stages accurate for weekly forecasts.\n- Researched target accounts in LinkedIn Sales Navigator and qualified leads using MEDDIC before handover.\n- Handled objections on price, timing and incumbents, turning 31% of first calls into discovery meetings.\n- Reached 132% of quarterly meetings quota for 3 consecutive quarters; ranked #2 of 21 reps.\n\nOutbound Call Agent, Ledgerly (2022–2023)\n- Followed up with inbound leads by email and phone.\n- Made phone calls to small businesses to set appointments for account managers.\n\nSKILLS\nOutreach, Salesforce, Cold calling\n\nLANGUAGES\nEnglish\n\nEDUCATION\nBA in English\n\nOTHER\nCovered the customer support inbox for two weeks during the holidays.\n",
+        "filename": "cv_rs_19.txt",
+        "mime": "text/plain",
+        "extraction_method": "plain_text",
+        "extraction_error": null
+      }
+    },
+    {
+      "ref": "rs-20",
+      "profile": "prospecting_heavy",
+      "expected_direction": "sdr>csr",
+      "candidate": {
+        "name": "Samir Eriksen",
+        "email": "samir.eriksen+rs@example.test",
+        "phone": null,
+        "location": "Riverton"
+      },
+      "answers": {
+        "shift_availability": "yes",
+        "languages": [
+          "English"
+        ],
+        "years_experience": 4
+      },
+      "cv": {
+        "text": "SAMIR ERIKSEN\nsamir.eriksen@example.test | +1-555-0137 | Riverton\n\nSUMMARY\nOutbound prospector who books meetings with new business buyers.\n\nEXPERIENCE\nSales Development Representative, Brightpath CRM (2023–present)\n- Reached 127% of quarterly meetings quota for 4 consecutive quarters; ranked #2 of 28 reps.\n- Generated $1260K in pipeline in one year selling a HR software suite to IT managers.\n- Built multi-step outbound email sequences in HubSpot Sequences with a 10% reply rate.\n- Wrote call scripts and trained 3 new SDRs on prospecting and objection handling.\n\nInside Sales Representative, CloudKettle (2022–2023)\n- Tracked leads and calls in HubSpot.\n- Followed up with inbound leads by email and phone.\n\nSKILLS\nOutreach, Salesforce, Cold calling\n\nLANGUAGES\nEnglish\n\nEDUCATION\nBA in English\n\nOTHER\nCovered the customer support inbox for two weeks during the holidays.\n",
+        "filename": "cv_rs_20.txt",
+        "mime": "text/plain",
+        "extraction_method": "plain_text",
+        "extraction_error": null
+      }
+    }
+  ]
+}

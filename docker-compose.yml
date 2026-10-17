@@ -28,6 +28,26 @@ services:
       timeout: 5s
       retries: 12
 
+  crm:
+    # Mock CRM (Phase 2): REST API, webhooks to n8n, HTML pages, failure simulation.
+    build:
+      context: .
+      dockerfile: crm/Dockerfile
+    image: auto-score-crm:local
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      CRM_PORT: "3000"
+      CRM_API_KEY: ${CRM_API_KEY:?run npm run init-env}
+      CRM_WEBHOOK_SECRET: ${CRM_WEBHOOK_SECRET:?run npm run init-env}
+      CRM_WEBHOOK_URL_APPLICATION: ${CRM_WEBHOOK_URL_APPLICATION:-http://n8n:5678/webhook/application-received}
+      CRM_WEBHOOK_URL_JOB: ${CRM_WEBHOOK_URL_JOB:-http://n8n:5678/webhook/job-draft-requested}
+      FAIL_RATE: ${FAIL_RATE:-0}
+      LATENCY_MS: ${LATENCY_MS:-0}
+    volumes:
+      - crm_data:/app/crm/data
+
   greenmail:
     # Local test mail server (D-011): SMTP 3025, IMAP 3143. Test data only.
     image: greenmail/standalone:2.1.14
@@ -45,3 +65,4 @@ services:
 
 volumes:
   n8n_data:
+  crm_data:

@@ -1,0 +1,10 @@
+.git
+.env
+.env.*
+node_modules
+data
+reports
+workflows
+crm/data
+docs
+tests

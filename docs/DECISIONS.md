@@ -12,6 +12,32 @@ Under D-008, Claude makes design choices during the straight-through build and m
 
 ---
 
+## D-019 · Synthetic data: template-based, seeded, answer key written from persona design
+- **Date:** 2026-10-17 · **Phase:** 2 · **Status:** pending learner review
+- **Decided by:** Claude (D-008)
+- **Options:** A: templates + seeded RNG (+ free, reproducible, every persona has a known intent; − CVs read alike) · B: add an LLM-written realism subset (+ realistic; − costs quota, not reproducible, the intended label can drift from the text)
+- **Decision:** A only, for now.
+  - `scripts/generate-applicants.js` (seed 20261017) writes 222 applicants: 111 per role, which is 32 strong, 30 medium, 28 weak and 20 edge-case/form-fail, plus 1 re-application.
+  - It also writes 20 role-switch CVs and 6 email samples (PDF, DOCX, TXT, a scanned image PDF, no attachment, unroutable address).
+  - Expected outcomes come from each persona's design.
+  - A lint step fails generation if a "should fail" CV contains a role keyword even as a substring. That is stricter than the pre-filter's whole-word matching, so the answer key can't be accidentally wrong.
+- **Revisit if:** the Phase 8 eval looks too easy. Then add an LLM-written subset and record it.
+
+## D-018 · CRM status model and API contract
+- **Date:** 2026-10-17 · **Phase:** 2 · **Status:** pending learner review
+- **Decided by:** Claude (D-008), fixing audit item 5
+- **Context:** brief §3.5's state machine had gaps: NEEDS_REVIEW and ERROR reachable only from SCREENING, no way out of NEEDS_REVIEW, and no human-decision states although "a final rejection is a human action".
+- **Decision:** see `crm/README.md`.
+  - NEW can go straight to PREFILTER_REJECTED, NEEDS_REVIEW or ERROR.
+  - NEEDS_REVIEW and ERROR can go back to SCREENING.
+  - AI outcomes can return to SCREENING for re-scoring.
+  - ADVANCED and REJECTED are human-only and terminal. Humans act through the pages; the automation API key cannot set them.
+  - Dedupe is a compare-and-set claim (`X-Expected-Status: NEW`). Retried writes are safe through `Idempotency-Key`.
+  - Failure simulation can be changed at runtime, including "committed but response lost".
+- **Why:** every record has a defined path to a final state. The fairness rule is enforced by the system, not by convention.
+- **Trade-offs accepted:** pages have no authentication (local demo).
+- **Revisit if:** the learner wants a simpler model for the walkthrough.
+
 ## D-017 · Nice-to-haves are flags; low confidence goes to review
 - **Date:** 2026-10-17 · **Phase:** 1 · **Status:** pending learner review
 - **Decided by:** Claude (D-008)

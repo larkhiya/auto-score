@@ -1,5 +1,6 @@
 // Text helpers shared by the evidence check (CV quotes) and the job-profile check (JD quotes).
 // Pure functions: no I/O, safe to inline into n8n Code nodes.
+const { sha256Hex } = require('./hash');
 
 // Lowercase, unify quotes and dashes, collapse whitespace. Used on BOTH sides of a comparison,
 // so "Handled  60 calls/day" in a quote still matches "handled 60 calls/day" in the CV.
@@ -23,4 +24,9 @@ function containsQuote(source, quote) {
   return normalizeForMatch(source).includes(q);
 }
 
-module.exports = { normalizeForMatch, containsQuote };
+// Fingerprint of a CV's content: whitespace and case changes don't change it. Used in idempotency keys.
+function textSha256(s) {
+  return sha256Hex(normalizeForMatch(s));
+}
+
+module.exports = { normalizeForMatch, containsQuote, textSha256 };

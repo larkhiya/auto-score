@@ -37,7 +37,7 @@
       "pattern": "^[a-z][a-z0-9_]{1,47}$"
     },
     "candidate_status": {
-      "description": "Candidate state machine (brief §3.5, extended in Phase 2).",
+      "description": "Candidate state machine (D-018). ADVANCED and REJECTED are human-only final decisions; automation can never set them.",
       "type": "string",
       "enum": [
         "NEW",
@@ -47,7 +47,9 @@
         "MAYBE",
         "NOT_A_FIT",
         "NEEDS_REVIEW",
-        "ERROR"
+        "ERROR",
+        "ADVANCED",
+        "REJECTED"
       ]
     },
     "evidence_quote": {

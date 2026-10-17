@@ -14,6 +14,24 @@ Template:
 
 ---
 
+## L-003 · Bash executed text I meant to write into a doc
+- **Date:** 2026-10-17 · **Phase:** 2 · **Who:** Claude
+- **What happened:** I updated LEARNING.md with `node -e "..."` and put markdown containing backticks and `$` inside the double-quoted string. Bash treated each backticked path as a command and ran it, including `scripts/generate-applicants.js`. The doc came out mangled. Earlier the same pattern had expanded `${CRM_API_KEY:?…}` in a Compose edit and broken a JS string in a `sed` fix.
+- **Symptom:** "Not a directory" errors and generator output pasted into the doc.
+- **Root cause:** bash expands backticks and `$` inside double quotes. I used shell one-liners for content edits because they're quick, even though the content contained shell syntax.
+- **Fix:** rewrote the section with the Edit tool. Checked the side effect: the generator is seeded, and a re-run produces byte-identical files (sha256 compared), so the data didn't change.
+- **Prevention rule:** never put file content in a double-quoted shell string. Use Edit/Write, or a script in a quoted heredoc (`<<'EOF'`). → promoted to Learned Rules: yes
+- **Concept it illustrates:** C-30 (environments: the shell is an interpreter, not a text pipe)
+
+## L-002 · Scripted edit broke the CRM app, and the test run hung instead of failing
+- **Date:** 2026-10-17 · **Phase:** 2 · **Who:** Claude
+- **What happened:** I added the `/admin/reset` route with a scripted string replacement and placed it above the line that declares `wrap`. `createApp` threw "Cannot access 'wrap' before initialization". The test setup had already opened a webhook server before failing, and `test.after` crashed on the server that never started, so the open server kept Node alive. `npm test` hung for 2 minutes instead of failing fast.
+- **Symptom:** `npm test` timed out with no output. Running the file directly showed the ReferenceError.
+- **Root cause:** (1) I edited by pattern without reading the surrounding code, even though the tool had warned the file had changed. (2) The cleanup assumed setup had succeeded.
+- **Fix:** moved `wrap` above every route that uses it. `test.after` now closes only what exists and drops open connections. Verified: 82/82 tests pass in 2.8 s.
+- **Prevention rule:** read the target region before inserting code; test teardown must tolerate a half-finished setup. → promoted to Learned Rules: yes
+- **Concept it illustrates:** C-26 (testing pyramid: tests must fail loudly, never hang)
+
 ## L-001 · Container startup log printed a test secret
 - **Date:** 2026-10-17 · **Phase:** 0 · **Who:** Claude
 - **What happened:** while checking that GreenMail started, I printed its logs. The entrypoint echoes its full Java command line, which included the test mailbox password from `GREENMAIL_OPTS`.
