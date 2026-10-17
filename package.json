@@ -14,8 +14,8 @@
     "n8n:export": "node scripts/n8n-export.js",
     "n8n:import": "node scripts/n8n-import.js",
     "n8n:roundtrip": "node scripts/n8n-roundtrip-check.js",
-    "build": "node scripts/build-validators.js && node scripts/build-workflows.js",
-    "build:check": "node scripts/build-validators.js --check && node scripts/build-workflows.js --check",
+    "build": "node scripts/build-validators.js && node scripts/build-prompts.js && node scripts/build-workflows.js",
+    "build:check": "node scripts/build-validators.js --check && node scripts/build-prompts.js --check && node scripts/build-workflows.js --check",
     "fixtures": "node scripts/make-fixtures.js",
     "crm": "node --disable-warning=ExperimentalWarning crm/server.js"
   },
