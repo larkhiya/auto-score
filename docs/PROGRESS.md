@@ -127,6 +127,10 @@ Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items m
   - **Name-swap:** the model input was byte-identical in all 5 pairs (pass: the name cannot reach the model). But 4 pairs scored differently on one run each, by up to 17.5 points; sdr pair 1 crossed the 55 threshold. Cause: `gemini-3.5-flash-lite` is not deterministic at temperature 0.
   - **Injection, model level:** a single-run delta of +7.5 against a 6.25 tolerance. The tolerance is below the measured noise, so one run cannot separate an injection effect from noise. The live pipeline caught all 3 injected CVs before the LLM.
   - The fix is decided with the consistency numbers from the next quota day. Options: a review band around thresholds, or a median of several runs; plus noise-based test tolerances or repeated runs.
+- [ ] Two silent-loss paths found during the learner's tour (stop 1, L-016), not yet fixed:
+  - **CRM door:** n8n down for longer than the CRM's 3 webhook retries (about 4 s) → the record stays NEW forever (`app_000607`)
+  - **Email door:** mail server restarted → its UIDs reset, and WF-02's stale `lastMessageUid: 39` skips new mail (1 UNSEEN message waiting)
+  - Plan: a reconciliation sweep for stale NEW records; a mail trigger without the UID bookmark (UNSEEN + mark read + Message-ID dedupe); two new matrix rows. The two stuck items are kept as test cases for the fixes
 - [ ] Consistency (`~e2`, `~e3`), v1 vs v2 (59-record sample), final report
 - [ ] Final `npm test` + `npm run eval:smoke` as the regression check
 - [ ] Learner: read the confusion matrices and explain the biggest error pattern first

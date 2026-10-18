@@ -7,7 +7,7 @@ Under D-008 (straight-through build), each phase's concepts are marked ⏭ when 
 |---|---|---|---|---|---|
 | C-01 | What workflow automation is | 0 | a recipe that cooks itself when the doorbell rings | ⏭ | |
 | C-02 | n8n anatomy: workflow, node, item, execution, credential | 0 | an assembly line: stations, boxes on the belt, a shift log | ⏭ | |
-| C-03 | Triggers: webhook vs polling vs schedule | 0, 3 | a doorbell vs checking the mailbox every 5 minutes | ⏭ | |
+| C-03 | Triggers: webhook vs polling vs schedule | 0, 3 | a doorbell vs checking the mailbox every 5 minutes | 🟨 | "The new application from the CRM is at risk since it went through the webhook path while n8n is down. The CRM already announced it, so it moves on." (tour stop 1; still to explain: the pull side's failure mode) |
 | C-04 | JSON paths, data mapping, n8n expressions | 1 | the address on an envelope | ⏭ | |
 | C-05 | Schemas and contracts between steps | 1 | the USB-C standard; a function signature between teams | ⏭ | |
 | C-06 | Configuration vs code | 1 | changing the thermostat vs rewiring the furnace | ⏭ | |
@@ -104,8 +104,11 @@ Under D-008 (straight-through build), each phase's concepts are marked ⏭ when 
   - Second attempt: "the CRM refuses and skips a record that isn't NEW". The refusal part is now right, but the learner still pictures "read first, then refuse" as two steps and didn't explain why a separate read-then-write fails. Explained: check-then-act race vs atomic compare-and-set, and that Idempotency-Key covers the same run retrying while CAS covers two different runs. Still 🟦 until the learner explains it back.
   - Third attempt: the race and the fix (check and write in one step) are both right. Remaining gap: the learner called that single step "the idempotency key". It's compare-and-set; the idempotency key makes a *retried* request safe. → 🟨 practiced. Revisit: "which header stops two different runs, and which stops one run's retry?"
 
+- **2026-10-18 · C-03 · "An email would come from an email API or webhook that notifies n8n."** That's push. Our email door is pull: WF-02's IMAP trigger connects to the mailbox and fetches UNSEEN mail. The learner then correctly predicted that the webhook door is the one at risk while n8n is down. Missing nuance: the CRM does notice the failure and retries (3 times over about 4 s), then gives up.
+  - The live test (tour stop 1) showed the pull door can lose mail too: GreenMail restarted, its UIDs reset, and WF-02's stored bookmark (`lastMessageUid: 39`) now skips the new message (UID 1). Revisit: "push loses events when the receiver is away; what does pull lose, and when?"
+
 ## Learner's open questions
-(none yet)
+- **2026-10-18:** "How do I get to understand the entire process of this system from start to finish?" → the guided tour, following one record (app_000350) through 7 stops. Stop 1 done.
 
 ## Glossary
 - **Workflow:** a graph of nodes that n8n runs when its trigger fires.

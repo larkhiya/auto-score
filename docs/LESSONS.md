@@ -14,6 +14,17 @@ Template:
 
 ---
 
+## L-016 · The failure matrix restarted every dependency except the system's own front doors
+- **Date:** 2026-10-18 · **Phase:** 8 · **Who:** Claude (found during the learner's tour, stop 1)
+- **What happened:** the learner's concept question ("n8n is down for 30 s; which application is lost?") became a live test, and it found two silent-loss paths that the §5.4 matrix had never exercised:
+  1. **CRM door:** with n8n stopped, the CRM's 3 webhook retries (about 4 s) all failed. `app_000607` stays NEW forever; nothing ever re-sends it.
+  2. **Email door:** GreenMail keeps mail in memory, so its message UIDs restart at 1 after a restart. WF-02's IMAP trigger keeps `lastMessageUid: 39` in its static data (the node's default `trackLastMessageId`), so it skips the new message forever.
+- **Symptom:** after n8n came back, the CRM record stayed NEW and the mailbox still held 1 UNSEEN message with no WF-02 execution.
+- **Root cause:** I designed the matrix from the outside in (CRM down, LLM down) and never restarted the orchestrator or the mail server. I also accepted a node default (`trackLastMessageId`) without asking what state it keeps and when that state goes stale.
+- **Fix:** pending (Phase 8): a reconciliation sweep for records left NEW, and a mail trigger that doesn't depend on a stale UID bookmark. Both get matrix rows: n8n down during intake, and mail server restarted.
+- **Prevention rule:** failure tests must also restart the orchestrator itself and every stateful trigger source, and check that nothing is left behind. → Learned Rule added.
+- **Concept it illustrates:** C-03 (push vs pull, and how each one loses events), C-24 (every record ends in a known state)
+
 ## L-015 · I committed an overwritten evidence file without reading it
 - **Date:** 2026-10-18 · **Phase:** 8 · **Who:** Claude
 - **What happened:** the accidental live runs from `npm test` (L-009) also rewrote `reports/injection-test-2026-10-17.json`. I committed the changed file in Phase 7 part 1 without opening it. The new content showed one failing case (sdr-006, +7.5 vs a 6.25 tolerance), while PROGRESS kept citing the same file as "3/3 pass".
