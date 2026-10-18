@@ -111,4 +111,5 @@ Run it, show the evidence (test output, execution ID, CRM state) and update the 
 - (L-005) Calibrate synthetic personas against the rubric anchors by hand (expected 0–4 per criterion and total) before trusting them as ground truth.
 - (L-007) After `npm run build`, import ALL workflows (a src module can be bundled into several) and run `npm run n8n:drift`.
 - (L-009) Unit tests stay offline: `npm test` only runs `tests/**/*.test.js`; never name a live script `*-test.js`.
+- (L-015) Before committing a changed file under `reports/`, read it and check every doc line that cites it; an unexpected change to evidence is a signal, not an artifact.
 - (L-014) Before any run of more than 20 LLM calls, state the provider's real daily limit (read it from the provider, e.g. the 429 body, not third-party posts) and the calls already used that day; plan each run to finish inside one quota day.

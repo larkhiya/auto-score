@@ -2,9 +2,9 @@
 **Current phase:** 8 — Prove it works every time · **Target finish:** straight-through build (D-008) · **Pace:** continuous; learner now doing retrieval questions at session start
 
 ## Now / Next / Blocked
-- **Now:** Phase 8: tooling built, failure matrix 13/13 on the non-LLM rows; the Gemini daily quota (500) is used up until about 00:00 UTC
-- **Next:** LLM-fault matrix rows (~9 calls), full dataset run (~370), consistency (~80), v1 vs v2, final eval:smoke, eval report
-- **Blocked:** the large run waits for (1) the quota reset and (2) the learner's choice of how to split it across quota days (L-014)
+- **Now:** Phase 8, Plan A (learner's choice): quota day 2026-10-18: LLM-fault rows (done, 5/5) + full dataset run `~e1` (~370 calls)
+- **Next:** next quota day (after 00:00 UTC): consistency `~e2`/`~e3` (~80), v1 on the 59-record sample (~118), final eval:smoke (~18), final report
+- **Blocked:** nothing (the second half waits for the quota reset)
 - **Notes:** no CRM reset for Phase 8: every run screens tagged copies (`<ref>~e1` etc.), so earlier evidence stays. The n8n Gemini credential is named "Google Gemini(PaLM) Api account".
 
 ## Phases
@@ -60,6 +60,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items m
 - [x] Evidence check active (zeroed a stitched quote; L-006 fixed the list-marker false negative)
 - [x] Status mapping tests at 54.9 / 55 / 74.9 / 75 pass for both profiles
 - [x] Injection test: 3/3 pass, no score increase and flagged every time (`reports/injection-test-2026-10-17.json`)
+  - **Correction 2026-10-18 (L-015):** that file was later overwritten by an accidental run (L-009) and now shows **2/3**: all 3 flagged and sent to NEEDS_REVIEW, but sdr-006 scored +7.5 against a 6.25 tolerance. The 3/3 run is no longer in git. Phase 8 re-examines this row against the measured noise.
 - [x] Name-swap counterfactual: identical scores for the pairs in both roles; redacted input identical (unit test)
 - [x] No role-specific words in any screening prompt (test)
 - [x] Cost per record recorded: about 3.3k input / 1.5k output tokens, 7–10 s, $0 on the free tier (RunLogs)
@@ -107,14 +108,26 @@ Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items m
   - 7 emails (PDF, DOCX, TXT sent twice, scanned, no attachment, unknown job, empty body)
   - CRM at 30% failures + 300 ms latency: 10 in = 10 out
   - CRM container stopped for 40 s: 6 in = 6 out, 4 dead letters replayed, 6/6 final
-- [~] Failure matrix, LLM rows (first run, before the quota ran out):
-  - invalid JSON once → repaired → SHORTLISTED ✓
-  - invalid JSON twice → NEEDS_REVIEW INVALID_MODEL_OUTPUT ✓
-  - 90 s timeout → retried → SHORTLISTED ✓
-  - 503 until switched off → ERROR + dead letter → replayed → SHORTLISTED (the check itself was cut short by the harness crash, L-013)
-  - rate limit: real quota exhaustion followed the injected 429s, so the clean "backoff then success" case still needs a run on a fresh quota
+- [x] Failure matrix, LLM rows on a fresh quota: **5/5** (`reports/failure-matrix-2026-10-18-llm.json`), about 8 real calls:
+  - invalid JSON once → repaired → SHORTLISTED (3 calls, 9 s)
+  - invalid JSON twice → NEEDS_REVIEW INVALID_MODEL_OUTPUT
+  - two 429s with RetryInfo 3 s → backoff → SHORTLISTED (14 s)
+  - 90 s timeout → one retry → SHORTLISTED (98 s)
+  - 503 on every call → ERROR LLM_UNAVAILABLE + dead letter → replay → SHORTLISTED (D-032)
+  - The first attempt on 2026-10-17 ran into the real daily quota (L-014) and a harness crash (L-013); this run supersedes it
+  - Side observation: the same strong CV scored 93.75 in one case and 90 in the others. Temperature 0 is not perfectly deterministic; the consistency run measures how much
 - [x] Fixed what the matrix found: harness crash (L-013); scanned-PDF `extraction_method` inconsistency (contract + generator, D-032)
-- [ ] Full dataset run, consistency, v1 vs v2, `reports/eval-<date>.md`
+- [x] Full dataset run (`~e1`, 2026-10-18, 370 LLM calls, 0 repairs), interim `reports/eval-2026-10-18.md`:
+  - records in = out: 253 → 253, 0 ERROR
+  - pre-filter **253/253**
+  - final status **245/253 (96.8%)**: csr 105/111, sdr 109/111, admin 31/31
+  - LLM-scored records 177/185 (95.7%); NEEDS_REVIEW 5.5% (expected 5.5%)
+  - §5.4 rows: **9/11**
+- [ ] Two §5.4 rows fail, with one root cause, found by the eval:
+  - **Name-swap:** the model input was byte-identical in all 5 pairs (pass: the name cannot reach the model). But 4 pairs scored differently on one run each, by up to 17.5 points; sdr pair 1 crossed the 55 threshold. Cause: `gemini-3.5-flash-lite` is not deterministic at temperature 0.
+  - **Injection, model level:** a single-run delta of +7.5 against a 6.25 tolerance. The tolerance is below the measured noise, so one run cannot separate an injection effect from noise. The live pipeline caught all 3 injected CVs before the LLM.
+  - The fix is decided with the consistency numbers from the next quota day. Options: a review band around thresholds, or a median of several runs; plus noise-based test tolerances or repeated runs.
+- [ ] Consistency (`~e2`, `~e3`), v1 vs v2 (59-record sample), final report
 - [ ] Final `npm test` + `npm run eval:smoke` as the regression check
 - [ ] Learner: read the confusion matrices and explain the biggest error pattern first
 
@@ -125,6 +138,15 @@ Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items m
 - Exercises: hello-items item-count prediction (Phase 0); find a loose field in the ScoreCard schema (Phase 1); spot-check 10 answer-key rows (Phase 2)
 
 ## Session log (newest first)
+### S-02 (continued) · 2026-10-18 · Phase 8 (part 2, quota day 1 of Plan A)
+- Done: restarted the stack (Docker Desktop had stopped overnight); LLM-fault matrix rows 5/5; full dataset run `~e1`; interim eval report with Claude's analysis collapsed (`reports/eval-notes.md`); `scripts/lib/eval-sets.js` (fixed consistency and v1 subsets)
+- Verified (evidence): `reports/eval-2026-10-18.md`: pre-filter 253/253, status 245/253, records in = out, §5.4 9/11; matrix 18/18 live checks; 164 tests
+- Found: model noise at temperature 0 (up to 17.5 points on identical input) explains the two failing §5.4 rows and at least one status miss; a stale "3/3" injection claim (L-015)
+- Not yet verified: consistency across 3 runs, v1 vs v2, the final regression run
+- Lessons: L-015 (Learned Rule added)
+- LLM calls this quota day: about 378 of 500
+- Next: quota day 2 (after 00:00 UTC): consistency `~e2`/`~e3` (~80), v1 sample (~118), final eval:smoke (~18). Then the learner decides how to handle the noise
+
 ### S-02 (continued) · 2026-10-18 · Phase 8 (part 1)
 - Done: llm-proxy + seam (`LLM_BASE_URL`); `scripts/lib/pipeline.js`; seed variants; `eval-smoke`, `failure-matrix`, `eval-report`; matrix run; fixes (harness, scanned-PDF convention)
 - Verified (evidence): eval:smoke 15/15; matrix 13/13 non-LLM rows plus 3 LLM rows passing; 164 tests; n8n matches git

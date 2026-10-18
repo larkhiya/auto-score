@@ -14,6 +14,15 @@ Template:
 
 ---
 
+## L-015 · I committed an overwritten evidence file without reading it
+- **Date:** 2026-10-18 · **Phase:** 8 · **Who:** Claude
+- **What happened:** the accidental live runs from `npm test` (L-009) also rewrote `reports/injection-test-2026-10-17.json`. I committed the changed file in Phase 7 part 1 without opening it. The new content showed one failing case (sdr-006, +7.5 vs a 6.25 tolerance), while PROGRESS kept citing the same file as "3/3 pass".
+- **Symptom:** the Phase 8 eval report reads that file and marked the injection row ❌; `git log` shows the change landed in the Phase 7 part 1 commit.
+- **Root cause:** I treated a report as a build artifact, not as evidence. An unexpected change to an evidence file is a signal; I staged it with everything else.
+- **Fix:** kept the Phase 5 claim in PROGRESS and added a dated correction under it; the row is now re-examined against measured noise (Phase 8).
+- **Prevention rule:** before committing a changed file under `reports/`, read it and check every doc line that cites it. → Learned Rule added.
+- **Concept it illustrates:** C-27 (evals: an eval is only as good as its evidence trail)
+
 ## L-014 · I planned the eval around a quota I'd never checked
 - **Date:** 2026-10-18 · **Phase:** 8 · **Who:** Claude
 - **What happened:** my Phase 8 estimate (about 586 calls "in one day") rested on the third-party "~1,000 requests per day" figure in D-007. The real free-tier limit is 500 per day. It ran out during the failure matrix, after a day that had already used about 450 calls.

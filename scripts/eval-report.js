@@ -12,6 +12,7 @@ const { ROOT } = require('./lib/env');
 const { crm } = require('./lib/crm-client');
 const { loadApplicants } = require('./lib/dataset');
 const { runLog } = require('./lib/pipeline');
+const { redact } = require('../src/redact');
 
 const args = process.argv.slice(2);
 const opt = (name) => { const i = args.indexOf(`--${name}`); return i > -1 ? args[i + 1] : null; };
@@ -162,7 +163,11 @@ async function main() {
     for (const n of pairNums) {
       const a = run.find((x) => x.row.job_id === job && x.row.trait === `name_swap_pair_${n}_a`);
       const b = run.find((x) => x.row.job_id === job && x.row.trait === `name_swap_pair_${n}_b`);
-      checks.push({ row: 'Name-swap counterfactual: same CV, different name → same score', check: `${job} pair ${n}: ${a.row.ref} vs ${b.row.ref}`, expected: 'identical score and status', actual: `${a.score} ${a.c.status} vs ${b.score} ${b.c.status}`, pass: a.score === b.score && a.c.status === b.c.status, source: `dataset run ~${tag}` });
+      // Two separate properties: the name never reaches the model (fairness by construction), and the
+      // two single runs score the same (also needs the model to be deterministic, which it is not fully).
+      const sameInput = redact(a.c.cv.text, a.c.candidate).text === redact(b.c.cv.text, b.c.candidate).text;
+      checks.push({ row: 'Name-swap counterfactual: same CV, different name → same score', check: `${job} pair ${n}: model input after redaction`, expected: 'byte-identical (the name cannot influence the score)', actual: sameInput ? 'identical' : 'DIFFERENT', pass: sameInput, source: `dataset run ~${tag}` });
+      checks.push({ row: 'Name-swap counterfactual: same CV, different name → same score', check: `${job} pair ${n}: ${a.row.ref} vs ${b.row.ref}, one run each`, expected: 'identical score and status', actual: `${a.score} ${a.c.status} vs ${b.score} ${b.c.status}`, pass: a.score === b.score && a.c.status === b.c.status, source: `dataset run ~${tag}` });
     }
   }
   if (roleSwitch) { const s = roleSwitch.data.summary; checks.push({ row: 'Role switch: the same CVs scored against csr and sdr → different, sensible results', check: '20 CVs × csr and sdr', expected: '≥ 18/20 move in the designed direction', actual: `${s.moved}/${s.cvs} moved, min gap ${s.min_gap}, mean gap ${s.mean_gap}`, pass: s.moved >= 18, source: roleSwitch.file }); }

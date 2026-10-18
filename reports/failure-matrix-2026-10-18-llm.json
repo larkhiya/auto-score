@@ -1,0 +1,65 @@
+{
+  "at": "2026-10-18T10:52:52.159Z",
+  "stamp": "mvdpero6",
+  "groups": [
+    "llm"
+  ],
+  "crashed": null,
+  "results": [
+    {
+      "group": "llm",
+      "row": "LLM returns invalid JSON, times out or hits a rate limit → repair retry or backoff, then NEEDS_REVIEW",
+      "check": "invalid_json_once: {\"mode\":\"invalid_json\",\"count\":1}",
+      "expected": "one repair retry, then the normal result (SHORTLISTED)",
+      "actual": "SHORTLISTED  score 90 · injected 1 · LLM calls 3 · 9 s",
+      "pass": true,
+      "evidence": {
+        "application_id": "app_000349"
+      }
+    },
+    {
+      "group": "llm",
+      "row": "LLM returns invalid JSON, times out or hits a rate limit → repair retry or backoff, then NEEDS_REVIEW",
+      "check": "invalid_json_twice: {\"mode\":\"invalid_json\",\"count\":2}",
+      "expected": "repair also fails → NEEDS_REVIEW INVALID_MODEL_OUTPUT",
+      "actual": "NEEDS_REVIEW INVALID_MODEL_OUTPUT score - · injected 2 · LLM calls 2 · 1 s",
+      "pass": true,
+      "evidence": {
+        "application_id": "app_000603"
+      }
+    },
+    {
+      "group": "llm",
+      "row": "LLM returns invalid JSON, times out or hits a rate limit → repair retry or backoff, then NEEDS_REVIEW",
+      "check": "rate_limit: {\"mode\":\"rate_limit\",\"count\":2,\"retry_delay_s\":3}",
+      "expected": "backoff (waits the 3 s RetryInfo each time), then SHORTLISTED",
+      "actual": "SHORTLISTED  score 90 · injected 2 · LLM calls 2 · 14 s",
+      "pass": true,
+      "evidence": {
+        "application_id": "app_000604"
+      }
+    },
+    {
+      "group": "llm",
+      "row": "LLM returns invalid JSON, times out or hits a rate limit → repair retry or backoff, then NEEDS_REVIEW",
+      "check": "timeout: {\"mode\":\"timeout\",\"count\":1,\"hold_ms\":95000}",
+      "expected": "the 90 s HTTP timeout fires, one retry, then SHORTLISTED",
+      "actual": "SHORTLISTED  score 93.75 · injected 1 · LLM calls 2 · 98 s",
+      "pass": true,
+      "evidence": {
+        "application_id": "app_000605"
+      }
+    },
+    {
+      "group": "llm",
+      "row": "LLM returns invalid JSON, times out or hits a rate limit → repair retry or backoff, then NEEDS_REVIEW",
+      "check": "llm_down: every Gemini call fails with 503 until switched off",
+      "expected": "retries exhausted → ERROR + dead letter LLM_UNAVAILABLE (D-028, not NEEDS_REVIEW: an outage is replayed, not sent to a person); replay after recovery → SHORTLISTED",
+      "actual": "ERROR LLM_UNAVAILABLE (injected 5 × 503) · replay: {\"open\":1,\"replayed\":1,\"resolved\":0,\"retry_failed\":0,\"manual\":0,\"duplicate_rows\":0} · then SHORTLISTED",
+      "pass": true,
+      "evidence": {
+        "application_id": "app_000606"
+      }
+    }
+  ]
+}
