@@ -99,6 +99,11 @@ function createApp({ service, apiKey, chaos = { fail_rate: 0, latency_ms: 0, fai
   api.post('/run-logs', wrap((req, res) => res.status(201).json(service.addRunLog(req.body))));
   api.get('/run-logs', wrap((req, res) => res.json(service.listRunLogs(req.query))));
   api.get('/stats', wrap((req, res) => res.json(service.stats())));
+  // Webhook delivery log (like GitHub's or Stripe's): find failed deliveries and send them again.
+  api.get('/webhook-deliveries', wrap((req, res) => res.json(service.listWebhookDeliveries(req.query))));
+  api.post('/webhook-deliveries/:id/redeliver', async (req, res) => {
+    res.json(await service.redeliverWebhook(req.params.id, { force: Boolean(req.body && req.body.force) }));
+  }); // Express 5 passes a rejected promise to the error handler
 
   app.use(api);
 

@@ -1,0 +1,81 @@
+{
+  "at": "2026-10-23T17:28:56.249Z",
+  "stamp": "mvl8m2e7",
+  "groups": [
+    "doors"
+  ],
+  "crashed": null,
+  "results": [
+    {
+      "group": "doors",
+      "row": "Orchestrator down while applications arrive → nothing lost (L-016)",
+      "check": "n8n stopped for 21 s while 1 CRM application (webhook) and 1 email arrive; then started again",
+      "expected": "webhook failed every CRM retry; WF-04 redelivers it → PREFILTER_REJECTED; the email waits UNSEEN → 1 record NEEDS_REVIEW MISSING_ANSWER; a forced 2nd redelivery changes nothing (1 claim); 0 LLM calls",
+      "actual": "n8n healthy; delivery before: failed after 3 tries (fetch failed), after: delivered, 4 attempts · CRM door: PREFILTER_REJECTED · email door: 1 record, NEEDS_REVIEW MISSING_ANSWER · both final 87 s after restart · forced redelivery: delivered, then PREFILTER_REJECTED with 1 claim · LLM calls 0/0",
+      "pass": true,
+      "evidence": {
+        "application_id": "app_000613",
+        "email_application_ids": [
+          "app_000614"
+        ],
+        "delivery": {
+          "id": 11,
+          "event": "application.created",
+          "event_id": "evt_711a101f-626f-41eb-8946-49261b776765",
+          "target": "http://n8n:5678/webhook/application-received",
+          "attempts": 4,
+          "status_code": 202,
+          "error": null,
+          "created_at": "2026-10-23T17:22:01.361Z",
+          "delivered_at": "2026-10-23T17:23:41.205Z",
+          "subject_id": "app_000613",
+          "redelivered_at": "2026-10-23T17:23:41.205Z",
+          "state": "delivered"
+        },
+        "history": [
+          {
+            "from_status": null,
+            "to_status": "NEW",
+            "actor": "system",
+            "execution_id": null,
+            "note": "created via crm",
+            "at": "2026-10-23T17:22:01.316Z"
+          },
+          {
+            "from_status": "NEW",
+            "to_status": "SCREENING",
+            "actor": "automation",
+            "execution_id": "4480",
+            "note": null,
+            "at": "2026-10-23T17:23:42.778Z"
+          },
+          {
+            "from_status": "SCREENING",
+            "to_status": "PREFILTER_REJECTED",
+            "actor": "automation",
+            "execution_id": "4480",
+            "note": "NO_CUSTOMER_FACING_EXPERIENCE",
+            "at": "2026-10-23T17:23:44.945Z"
+          }
+        ],
+        "down_s": 21,
+        "final_after_restart_s": 87
+      }
+    },
+    {
+      "group": "doors",
+      "row": "Mail server restarted → no email lost (L-016)",
+      "check": "GreenMail restarted while n8n keeps running (UIDs start again at 1), then 1 email arrives",
+      "expected": "processed with no help within 180 s: 1 record, job csr, NEEDS_REVIEW incl. MISSING_ANSWER, 0 LLM calls",
+      "actual": "not processed in 180 s (stale in-memory UID bookmark, D-034) · runbook: processed 66 s after re-publishing WF-02 → 1 record, NEEDS_REVIEW MISSING_ANSWER, 0 LLM calls",
+      "pass": false,
+      "evidence": {
+        "application_ids": [
+          "app_000615"
+        ],
+        "unaided": false,
+        "runbook": "processed 66 s after re-publishing WF-02"
+      }
+    }
+  ]
+}

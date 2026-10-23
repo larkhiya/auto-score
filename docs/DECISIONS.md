@@ -12,6 +12,56 @@ Under D-008, Claude makes design choices during the straight-through build and m
 
 ---
 
+## D-034 · Email intake: no UID bookmark across activations, a catch-up every minute; a mail-server-only restart still needs WF-02 re-published
+- **Date:** 2026-10-19 · **Phase:** 8 · **Status:** pending learner review (the remaining gap needs the learner's choice)
+- **Decided by:** Claude (D-008), fixing L-016 (email door)
+- **Context:** docs.n8n.io doesn't document the relevant option, so this comes from the installed node's source (`EmailReadImap` v2.2 in n8n 2.43.7, plus its `@n8n/imap` wrapper):
+  - `trackLastMessageId` (default true) keeps `lastMessageUid` in the workflow's static data, which is saved to the database. It searches `UNSEEN UID <bookmark>:*` and skips every UID at or below the bookmark. The node's own comment says it: "UIDs can change but this is not being treated here" (no UIDVALIDITY check). GreenMail keeps mail in memory, so each restart starts UIDs at 1 under a new UIDVALIDITY.
+  - Setting it to `false` clears the bookmark **only when WF-02 is activated**. After every batch the node sets it again in memory, for the rest of that activation.
+  - Mail that waited while nothing listened is fetched only by a "catch-up": at activation (only when a bookmark exists), after a reconnect, and on the `forceReconnect` timer (unset, so never). Otherwise new mail arrives only through IMAP EXISTS events.
+  - The task's suggested fix ("`trackLastMessageId` false, rely on UNSEEN") was therefore incomplete, and reading the source before changing anything is what showed it.
+- **Options:**
+  - A: keep the defaults (− the bug: a stale bookmark skips new mail forever)
+  - B: `trackLastMessageId: false` alone (− mail waiting at startup is never fetched until another email arrives, because there's no bookmark and so no catch-up at activation)
+  - C: B + `forceReconnect: 1` (+ a reconnect every minute catches up on every UNSEEN message; covers n8n restarts and full-stack restarts, the case that actually happened; − reconnect churn; a mail server that resets its UIDs while n8n keeps running still loses mail until WF-02 is re-activated)
+  - D: C + a watchdog that re-publishes WF-02 on a schedule (+ closes the gap automatically; − an n8n API key with admin rights inside n8n, and a workflow that turns another one off and on)
+  - E: a different email intake: an inbound-mail webhook (SendGrid/Mailgun/Postmark style), or the Gmail API trigger at the Gmail step (+ no IMAP UIDs at all; − a bigger change, and Gmail's trigger behaviour still to be verified)
+- **Decision:** C now. For the remaining gap, a runbook step: if the mail server restarts on its own, re-publish WF-02 (or restart n8n). D or E is the learner's call.
+- **Evidence:**
+  - Bug reproduced on the old config: email `waitmail1` sent at 13:50:06 with bookmark 39 was still UNSEEN 45 s later, with no WF-02 execution.
+  - After the fix was published (13:51:54), the forced reconnect caught it up at 13:52:53: WF-02 exec 4413 → WF-03 4414 → WF-10 4417 → `app_000608` csr NEEDS_REVIEW MISSING_ANSWER, 0 LLM calls.
+  - GreenMail-only restart (13:56, new UIDVALIDITY): email `gmrestart1` (UID 1) was still UNSEEN after 3 minutes, filtered out by the in-memory bookmark 1. After WF-02 was re-published at 14:00:39 it was processed at 14:01:41 (WF-02 exec 4431 → `app_000609` NEEDS_REVIEW, 0 LLM calls).
+  - Matrix `doors` (`reports/failure-matrix-2026-10-23-doors.json`): row 1 ✓ (n8n stopped 21 s; the email `app_000614` was final 87 s after the restart). Row 2 ✗ by design of this decision: after a GreenMail-only restart the email wasn't processed in 180 s; re-publishing WF-02 → processed 66 s later (`app_000615`).
+- **Trade-offs accepted:** one IMAP reconnect a minute (fine for GreenMail; at Gmail, probably 5 minutes). Still at-most-once per message (D-023: marked read when fetched). Mail can wait up to a minute after n8n starts. GreenMail itself loses any mail it holds when it stops: an email sent during a matrix run on 2026-10-19 was gone after Docker Desktop stopped. That's the test mail server, not WF-02; a real mailbox keeps its mail.
+- **Revisit if:** moving to Gmail (D-003/D-011). Gmail keeps UIDVALIDITY stable for INBOX, but a recreated mailbox resets it, so prefer E there. Also revisit if an n8n release adds a UIDVALIDITY check, or the learner picks D.
+
+## D-033 · Missed CRM webhooks are reconciled from the CRM's delivery log by a sweep (WF-04)
+- **Date:** 2026-10-19 · **Phase:** 8 · **Status:** pending learner review
+- **Decided by:** Claude (D-008), fixing L-016 (CRM door)
+- **Context:** the CRM retries a webhook 3 times in about 2 s. If n8n is down for longer, the application stays NEW forever (`app_000607`). The CRM also holds hundreds of NEW records that were seeded on purpose with webhooks off, so a sweep over "all NEW records" would screen them all (hundreds of LLM calls).
+- **Options:**
+  - A: sweep stale NEW records (+ no CRM change; − can't tell "missed" from "never announced": it would pick up every deliberately quiet record)
+  - B: make the CRM retry for longer (hours, like Stripe's 3 days) (+ simplest; − a real CRM's retry budget isn't ours to change, and any finite budget still ends in a lost event)
+  - C: reconcile against the sender's delivery log: the CRM lists failed deliveries and redelivers on request (GitHub/Stripe style), and an n8n sweep asks it to (+ touches only events that really failed; the redelivered event takes WF-01's exact path; the CRM records every attempt; − needs a vendor with a delivery-log API; one more workflow)
+- **Decision:** C.
+  - **CRM:** each delivery records its `subject_id` (the application) and `redelivered_at`. New endpoints:
+    - `GET /webhook-deliveries?event=&status=failed|pending|delivered&subject_id=&limit=`, least recently tried first, so a delivery that keeps failing can't block the ones behind it.
+    - `POST /webhook-deliveries/:id/redeliver`: one attempt, same `event_id`, the subject's current state, `redelivery: true`. It answers `409 ALREADY_DELIVERED` unless `{force: true}`.
+    - "Failed" means it finished without a 2xx, or has no result after 60 s (the sender died mid-retry).
+    - A migration linked the one older failed row (8 → `app_000607`) by creation time. It was created 18 ms before, the only candidate in that second.
+  - **WF-04 Reconcile webhooks:** every minute it lists failed `application.created` deliveries (10 per run), asks for a redelivery one per second, and writes a summary. A run with a failed redelivery throws, so it's saved as a failed execution.
+  - **Duplicates are safe twice over:** the CRM refuses to redeliver a delivered event, and WF-10's compare-and-set claim (`X-Expected-Status: NEW`) skips a record that is no longer NEW.
+  - WF-04 calls the CRM with plain HTTP Request nodes, not WF-11 (D-024): the schedule is the retry loop, and WF-11 would add an execution every minute.
+  - Successful runs aren't saved (`saveDataSuccessExecution: none`): 1,440 a day would bury the real executions. Failed runs are saved. The audit trail is the delivery row (attempts, `redelivered_at`) and the WF-01/WF-10 executions that the redelivery starts.
+- **Why:** reconcile against the record of what was actually sent, never against "everything that looks unprocessed". That works because of the C-03 asymmetry: a push can be lost, but the sender's log of the push can be read.
+- **Evidence:** `app_000607` had been NEW since 2026-10-18 11:50, and delivery 8 had failed after 3 attempts ("fetch failed"). WF-04 redelivered it at 2026-10-19 13:52:40: WF-01 exec 4407 → WF-10 exec 4408 → PREFILTER_REJECTED, 0 LLM calls. Delivery 8 now shows 4 attempts, delivered. Later sweeps found nothing to do, and the history is unchanged. Before WF-04 went live, the log held 8 deliveries, and this was the only failed one. Matrix `doors` row 1 passed (`reports/failure-matrix-2026-10-23-doors.json`): with n8n stopped for 21 s, `app_000613` was redelivered and reached PREFILTER_REJECTED 87 s after the restart. A forced second redelivery → WF-10 4495 DUPLICATE_SKIPPED, still one claim.
+- **Trade-offs accepted:**
+  - Recovery takes up to a minute plus n8n's boot time.
+  - The sweep covers `application.created` only. A failed `job.draft_requested` has the recruiter's re-draft button.
+  - A redelivery that keeps failing is tried every minute and shows up as a failed execution until someone fixes it.
+  - At 10 per minute, a large backlog is screened gradually, which also caps the LLM call rate.
+- **Revisit if:** the real CRM has no delivery-log API (then reconcile by polling "created since <cursor>" with a high-water mark, never "all NEW"), or the CRM's retry policy can be configured.
+
 ## D-032 · Three places the system is deliberately more specific than the brief's §5.4 wording
 - **Date:** 2026-10-18 · **Phase:** 8 · **Status:** pending learner review
 - **Decided by:** Claude (D-008), made explicit by the failure-injection matrix

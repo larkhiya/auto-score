@@ -16,19 +16,24 @@ const profiles = ['csr.v1.json', 'sdr.v1.json'].map((f) => JSON.parse(fs.readFil
 const quiet = { info() {}, warn() {}, error() {} };
 
 let server; let hookServer; let base; let hooks; let sender; let chaos;
+let hookStatus = 200; // what the fake n8n answers; 503 simulates n8n being down
 
 test.before(async () => {
   hooks = [];
   hookServer = http.createServer((req, res) => {
     let body = '';
     req.on('data', (d) => (body += d));
-    req.on('end', () => { hooks.push({ headers: req.headers, body: JSON.parse(body) }); res.end('ok'); });
+    req.on('end', () => {
+      if (hookStatus !== 200) { res.statusCode = hookStatus; return res.end('down'); }
+      hooks.push({ headers: req.headers, body: JSON.parse(body) });
+      res.end('ok');
+    });
   });
   await new Promise((r) => hookServer.listen(0, r));
   const hookUrl = `http://127.0.0.1:${hookServer.address().port}`;
   const db = open(':memory:');
   sender = createWebhookSender({ db, secret: SECRET, urls: { 'application.created': `${hookUrl}/app`, 'job.draft_requested': `${hookUrl}/job` }, baseDelayMs: 5, log: quiet });
-  const service = createService(db, { onEvent: (e, p) => sender.deliver(e, p) });
+  const service = createService(db, { onEvent: (e, p) => sender.deliver(e, p), onRedeliver: (d, p) => sender.redeliver(d, p) });
   service.seedJobs(profiles);
   chaos = { fail_rate: 0, latency_ms: 0, fail_after_rate: 0 };
   server = createApp({ service, apiKey: KEY, chaos, log: quiet }).listen(0);
@@ -116,6 +121,73 @@ test('bulk seeding can switch webhooks off (notify=false)', async () => {
   await api('POST', '/applications?notify=false', newApp({ candidate: { name: 'Quiet', email: 'quiet@example.test' } }));
   await sender.idle();
   assert.equal(hooks.length, before);
+});
+
+test('a webhook that fails every retry stays in the delivery log as failed, linked to its application', async () => {
+  hookStatus = 503;
+  let app; let quiet;
+  try {
+    app = (await api('POST', '/applications', newApp({ candidate: { name: 'Missed', email: 'missed@example.test' } }))).body.application;
+    quiet = (await api('POST', '/applications?notify=false', newApp({ candidate: { name: 'Seeded', email: 'seeded@example.test' } }))).body.application;
+    await sender.idle();
+  } finally { hookStatus = 200; }
+  const failed = (await api('GET', '/webhook-deliveries?event=application.created&status=failed')).body;
+  const mine = failed.items.filter((d) => d.subject_id === app.application_id);
+  assert.equal(mine.length, 1);
+  assert.equal(mine[0].state, 'failed');
+  assert.equal(mine[0].attempts, 3);
+  assert.equal(mine[0].error, 'HTTP 503');
+  assert.equal(mine[0].delivered_at, null);
+  // A record created with webhooks off was never announced, so it is never in the log: a sweep over
+  // failed deliveries can't pick up deliberately quiet (seeded) records.
+  assert.equal(failed.items.some((d) => d.subject_id === quiet.application_id), false);
+  assert.equal((await api('GET', '/stats')).body.webhooks.failed, failed.total);
+});
+
+test('redelivery sends the same event_id with the current record, once; a second one needs force', async () => {
+  const failed = (await api('GET', '/webhook-deliveries?event=application.created&status=failed')).body.items;
+  const d = failed.find((x) => x.subject_id);
+  const before = hooks.length;
+  const res = await api('POST', `/webhook-deliveries/${d.id}/redeliver`);
+  assert.equal(res.status, 200);
+  assert.equal(res.body.state, 'delivered');
+  assert.equal(res.body.attempts, d.attempts + 1);
+  assert.ok(res.body.redelivered_at);
+  assert.equal(hooks.length, before + 1);
+  const hook = hooks.at(-1);
+  assert.equal(hook.headers['x-event-id'], d.event_id);
+  assert.equal(hook.headers['x-webhook-secret'], SECRET);
+  assert.equal(hook.body.event_id, d.event_id);
+  assert.equal(hook.body.redelivery, true);
+  assert.equal(hook.body.application.application_id, d.subject_id);
+  assert.equal(hook.body.application.status, 'NEW');
+  const after = (await api('GET', '/webhook-deliveries?event=application.created&status=failed')).body.items;
+  assert.equal(after.some((x) => x.id === d.id), false);
+  const bySubject = (await api('GET', `/webhook-deliveries?subject_id=${d.subject_id}`)).body.items;
+  assert.deepEqual(bySubject.map((x) => [x.id, x.state]), [[d.id, 'delivered']]);
+  const again = await api('POST', `/webhook-deliveries/${d.id}/redeliver`);
+  assert.equal(again.status, 409);
+  assert.equal(again.body.error.code, 'ALREADY_DELIVERED');
+  assert.equal(hooks.length, before + 1);
+  const forced = await api('POST', `/webhook-deliveries/${d.id}/redeliver`, { force: true });
+  assert.equal(forced.status, 200);
+  assert.equal(hooks.length, before + 2);
+});
+
+test('redelivery to a receiver that is still down keeps the delivery failed', async () => {
+  hookStatus = 503;
+  try {
+    const app = (await api('POST', '/applications', newApp({ candidate: { name: 'Still down', email: 'stilldown@example.test' } }))).body.application;
+    await sender.idle();
+    const d = (await api('GET', '/webhook-deliveries?event=application.created&status=failed')).body.items.find((x) => x.subject_id === app.application_id);
+    const res = await api('POST', `/webhook-deliveries/${d.id}/redeliver`);
+    assert.equal(res.status, 200);
+    assert.equal(res.body.state, 'failed');
+    assert.equal(res.body.attempts, 4);
+    assert.equal(res.body.status_code, 503);
+  } finally { hookStatus = 200; }
+  assert.equal((await api('POST', '/webhook-deliveries/999999/redeliver')).body.error.code, 'DELIVERY_NOT_FOUND');
+  assert.equal((await api('GET', '/webhook-deliveries?status=lost')).status, 422);
 });
 
 test('same person, same job, different CV → new record marked duplicate_of', async () => {
@@ -263,4 +335,28 @@ test('re-draft asks WF-05 again; a failed draft is recorded on the job, never si
   assert.equal(hooks.slice(before).filter((h) => h.body.event === 'job.draft_requested').length, 2);
   const page = await fetch(`${base}/ui/jobs/books`);
   assert.match(await page.text(), /drafting a profile/);
+});
+
+test('migration links a failed delivery logged before subject ids existed to the one record created just before it', () => {
+  const file = path.join(fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'crm-mig-')), 'crm.sqlite');
+  let db = open(file);
+  const service = createService(db);
+  service.seedJobs(profiles);
+  const quiet = service.createApplication(newApp({ candidate: { name: 'Earlier', email: 'earlier@example.test' } }), { notify: false }).application;
+  const missed = service.createApplication(newApp({ candidate: { name: 'Old row', email: 'oldrow@example.test' } }), { notify: false }).application;
+  const later = (ms) => new Date(Date.parse(missed.created_at) + ms).toISOString();
+  const add = db.prepare("INSERT INTO webhook_deliveries (event, event_id, target, attempts, error, created_at, delivered_at) VALUES ('application.created', ?, 't', ?, ?, ?, ?)");
+  // Old-format rows: no subject_id. Only the failed one with a unique match gets linked.
+  add.run('evt_failed', 3, 'fetch failed', later(2), null);
+  add.run('evt_delivered', 1, null, later(3), later(4));
+  add.run('evt_orphan', 3, 'fetch failed', later(60000), null);
+  db.close();
+  db = open(file); // the migration runs on open
+  const subject = (e) => db.prepare('SELECT subject_id FROM webhook_deliveries WHERE event_id = ?').get(e).subject_id;
+  assert.equal(subject('evt_failed'), missed.application_id); // not `quiet`, created earlier
+  assert.notEqual(quiet.application_id, missed.application_id);
+  assert.equal(subject('evt_delivered'), null);
+  assert.equal(subject('evt_orphan'), null); // nothing created in the second before it
+  db.close();
+  fs.rmSync(path.dirname(file), { recursive: true, force: true });
 });

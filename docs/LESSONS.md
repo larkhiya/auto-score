@@ -14,6 +14,15 @@ Template:
 
 ---
 
+## L-017 · My new matrix check looked up a mixed-case email the CRM stores lowercased
+- **Date:** 2026-10-19 · **Phase:** 8 · **Who:** Claude
+- **What happened:** the first run of the "doors" matrix group reported the email door as lost ("0 record") after n8n's restart. The email had in fact been processed 50 s after the restart (WF-02 exec 4448 → `app_000611` NEEDS_REVIEW MISSING_ANSWER).
+- **Symptom:** the check said "no record", but WF-02's executions and its bookmark had moved on.
+- **Root cause:** the check built the sender as `robin.okafor+doorB<stamp>@…` (capital B) and compared it exactly with `candidate.email`. The CRM lowercases emails on create (D-018 dedupe), so they never matched. The older email group used lowercase tags, so it never hit this.
+- **Fix:** the helper lowercases the address it returns. The run was stopped and re-run. Before re-running, I confirmed in the CRM that both doors of the first run had worked (`app_000610`, `app_000611`, 0 LLM calls).
+- **Prevention rule:** compare identifiers the way the system of record normalizes them. Before trusting a "lost" result, look for the record by a looser match (execution, Message-ID). Not promoted (harness-specific).
+- **Concept it illustrates:** C-28 (observability: a check is evidence only if it looks where the system writes)
+
 ## L-016 · The failure matrix restarted every dependency except the system's own front doors
 - **Date:** 2026-10-18 · **Phase:** 8 · **Who:** Claude (found during the learner's tour, stop 1)
 - **What happened:** the learner's concept question ("n8n is down for 30 s; which application is lost?") became a live test, and it found two silent-loss paths that the §5.4 matrix had never exercised:
@@ -21,7 +30,10 @@ Template:
   2. **Email door:** GreenMail keeps mail in memory, so its message UIDs restart at 1 after a restart. WF-02's IMAP trigger keeps `lastMessageUid: 39` in its static data (the node's default `trackLastMessageId`), so it skips the new message forever.
 - **Symptom:** after n8n came back, the CRM record stayed NEW and the mailbox still held 1 UNSEEN message with no WF-02 execution.
 - **Root cause:** I designed the matrix from the outside in (CRM down, LLM down) and never restarted the orchestrator or the mail server. I also accepted a node default (`trackLastMessageId`) without asking what state it keeps and when that state goes stale.
-- **Fix:** pending (Phase 8): a reconciliation sweep for records left NEW, and a mail trigger that doesn't depend on a stale UID bookmark. Both get matrix rows: n8n down during intake, and mail server restarted.
+- **Fix (2026-10-19):**
+  - **CRM door, fixed (D-033).** The CRM's webhook delivery log can be listed and redelivered. WF-04 asks for a redelivery of every failed `application.created` once a minute, so seeded NEW records (never announced) are never touched. `app_000607` → PREFILTER_REJECTED via WF-01 exec 4407 / WF-10 4408, 0 LLM calls.
+  - **Email door, partly fixed (D-034).** WF-02 now runs with `trackLastMessageId: false` and `forceReconnect: 1`: no bookmark survives an n8n restart, and waiting mail is caught up within a minute. Reading the node's source showed that the suggested one-option fix wasn't enough (no catch-up at activation without a bookmark), and that the node sets the bookmark again in memory after every batch. So a GreenMail-only restart while n8n runs still strands mail until WF-02 is re-published. That gap is open, for the learner (D-034 options D/E).
+  - Matrix group `doors`: see PROGRESS Phase 8.
 - **Prevention rule:** failure tests must also restart the orchestrator itself and every stateful trigger source, and check that nothing is left behind. → Learned Rule added.
 - **Concept it illustrates:** C-03 (push vs pull, and how each one loses events), C-24 (every record ends in a known state)
 

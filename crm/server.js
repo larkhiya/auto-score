@@ -23,7 +23,10 @@ const webhooks = createWebhookSender({
     'job.draft_requested': env.CRM_WEBHOOK_URL_JOB,
   },
 });
-const service = createService(db, { onEvent: (event, payload) => webhooks.deliver(event, payload) });
+const service = createService(db, {
+  onEvent: (event, payload) => webhooks.deliver(event, payload),
+  onRedeliver: (delivery, payload) => webhooks.redeliver(delivery, payload),
+});
 
 const jobsDir = path.join(ROOT, 'config', 'jobs');
 const profiles = fs.readdirSync(jobsDir).filter((f) => f.endsWith('.json')).sort()

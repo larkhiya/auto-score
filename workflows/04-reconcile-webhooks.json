@@ -1,0 +1,169 @@
+{
+  "connections": {
+    "Every minute": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Failed deliveries (CRM)",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Failed deliveries (CRM)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "One item per delivery",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "One item per delivery": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Redeliver (CRM)",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Redeliver (CRM)": {
+      "main": [
+        [
+          {
+            "index": 0,
+            "node": "Summary",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  },
+  "name": "WF-04 Reconcile webhooks",
+  "nodes": [
+    {
+      "id": "bd631c90-5021-4377-89ae-8bdb35b58a19",
+      "name": "Every minute",
+      "notes": "Reconciliation sweep (D-033): asks the CRM to re-send webhooks it gave up on. Successful runs are not saved.",
+      "notesInFlow": true,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "position": [
+        0,
+        300
+      ],
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2
+    },
+    {
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "CRM API key"
+        }
+      },
+      "id": "39d71a77-ccf5-447b-83f8-28ded192ce2a",
+      "name": "Failed deliveries (CRM)",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 10000
+        },
+        "url": "http://crm:3000/webhook-deliveries?event=application.created&status=failed&limit=10"
+      },
+      "position": [
+        240,
+        300
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5
+    },
+    {
+      "id": "dab0266f-40f8-4f77-9360-1d19a35c9979",
+      "name": "One item per delivery",
+      "parameters": {
+        "jsCode": "// The CRM's delivery log lists the webhooks it gave up on, e.g. because n8n was down for longer\n// than its 3 retries (L-016). Only those are re-sent. Records created with webhooks off (seeded test\n// data) were never announced, so they are never in this list and never screened by accident.\n// A row without a subject (logged before the CRM recorded one) can't be rebuilt: skipped here,\n// still counted in the CRM's /stats.\nconst page = $input.first().json;\nreturn (page.items || []).filter((d) => d.subject_id).map((d) => ({\n  json: { delivery_id: d.id, event_id: d.event_id, application_id: d.subject_id, attempts: d.attempts, last_error: d.error },\n}));",
+        "mode": "runOnceForAllItems"
+      },
+      "position": [
+        480,
+        300
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "CRM API key"
+        }
+      },
+      "id": "e4e72d06-20f0-49db-962f-b6e50d384e56",
+      "name": "Redeliver (CRM)",
+      "notes": "The CRM re-sends the same event to WF-01, so it takes the normal path: normalize → WF-10, whose compare-and-set claim skips anything already screened.",
+      "notesInFlow": true,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchInterval": 1000,
+              "batchSize": 1
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        },
+        "url": "={{ 'http://crm:3000/webhook-deliveries/' + $json.delivery_id + '/redeliver' }}"
+      },
+      "position": [
+        720,
+        300
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5
+    },
+    {
+      "id": "405993d9-5d3f-4475-a102-6d3e1a4cc213",
+      "name": "Summary",
+      "parameters": {
+        "jsCode": "// One line per delivery this run touched (records in = records out). The CRM keeps the state:\n// a delivery that still fails stays in its log and is tried again on the next run.\nconst outcomes = $input.all().map((it, i) => {\n  const d = $('One item per delivery').itemMatching(i).json;\n  const r = it.json;\n  if (r.statusCode === undefined) return { ...d, result: 'CALL_FAILED', detail: String((r.error && r.error.message) || r.error || 'no response').slice(0, 200) };\n  if (r.statusCode === 409) return { ...d, result: 'ALREADY_DELIVERED' }; // an overlapping run got there first\n  if (r.statusCode !== 200) return { ...d, result: `HTTP_${r.statusCode}`, detail: r.body && r.body.error ? r.body.error.code : null };\n  return { ...d, result: r.body.state === 'delivered' ? 'REDELIVERED' : 'STILL_FAILING', detail: r.body.error || null };\n});\nconst problems = outcomes.filter((o) => !['REDELIVERED', 'ALREADY_DELIVERED'].includes(o.result));\n// Successful runs aren't saved (one a minute would bury the real executions), failed ones are: so a\n// redelivery that keeps failing shows up as a failed execution until someone fixes the cause.\nif (problems.length) throw new Error(`${problems.length} of ${outcomes.length} redeliveries failed: ${JSON.stringify(problems).slice(0, 900)}`);\nreturn [{ json: { checked: outcomes.length, redelivered: outcomes.filter((o) => o.result === 'REDELIVERED').length, outcomes } }];",
+        "mode": "runOnceForAllItems"
+      },
+      "position": [
+        960,
+        300
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    }
+  ],
+  "published": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none"
+  }
+}

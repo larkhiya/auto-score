@@ -100,7 +100,7 @@
       },
       "id": "cd8e0cce-5b6a-43ae-8705-4cbc85369d87",
       "name": "New email (IMAP)",
-      "notes": "Polls the test mailbox (GreenMail now, Gmail later: D-011). Marks mail read.",
+      "notes": "Polls the test mailbox (GreenMail now, Gmail later: D-011). Fetches every UNSEEN message, no UID bookmark across restarts, and reconnects every minute to catch up on mail that waited (D-034). Marks mail read.",
       "notesInFlow": true,
       "parameters": {
         "dataPropertyAttachmentsPrefixName": "attachment_",
@@ -108,7 +108,8 @@
         "mailbox": "INBOX",
         "options": {
           "customEmailConfig": "[\"UNSEEN\"]",
-          "trackLastMessageId": true
+          "forceReconnect": 1,
+          "trackLastMessageId": false
         },
         "postProcessAction": "read"
       },

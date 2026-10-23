@@ -127,21 +127,32 @@ Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items m
   - **Name-swap:** the model input was byte-identical in all 5 pairs (pass: the name cannot reach the model). But 4 pairs scored differently on one run each, by up to 17.5 points; sdr pair 1 crossed the 55 threshold. Cause: `gemini-3.5-flash-lite` is not deterministic at temperature 0.
   - **Injection, model level:** a single-run delta of +7.5 against a 6.25 tolerance. The tolerance is below the measured noise, so one run cannot separate an injection effect from noise. The live pipeline caught all 3 injected CVs before the LLM.
   - The fix is decided with the consistency numbers from the next quota day. Options: a review band around thresholds, or a median of several runs; plus noise-based test tolerances or repeated runs.
-- [ ] Two silent-loss paths found during the learner's tour (stop 1, L-016), not yet fixed:
-  - **CRM door:** n8n down for longer than the CRM's 3 webhook retries (about 4 s) → the record stays NEW forever (`app_000607`)
-  - **Email door:** mail server restarted → its UIDs reset, and WF-02's stale `lastMessageUid: 39` skips new mail (1 UNSEEN message waiting)
-  - Plan: a reconciliation sweep for stale NEW records; a mail trigger without the UID bookmark (UNSEEN + mark read + Message-ID dedupe); two new matrix rows. The two stuck items are kept as test cases for the fixes
+- [x] Silent-loss path 1 (L-016), **CRM door: fixed (D-033).** The CRM's webhook delivery log can be listed and redelivered (`GET /webhook-deliveries`, `POST …/:id/redeliver`, 4 new CRM tests). WF-04 asks for a redelivery of every failed `application.created` once a minute; seeded NEW records were never announced, so they are never touched.
+  - `app_000607` (NEW since 2026-10-18) → WF-01 exec 4407 → WF-10 4408 → PREFILTER_REJECTED, 0 LLM calls; delivery 8: 4 attempts, delivered
+  - Matrix `doors` row 1 ✓ (`reports/failure-matrix-2026-10-23-doors.json`): n8n stopped 21 s while 1 CRM application and 1 email arrive. The CRM application (`app_000613`) was redelivered → PREFILTER_REJECTED (WF-10 4480); the email (`app_000614`) → NEEDS_REVIEW MISSING_ANSWER (WF-10 4489). Both final 87 s after restart, 0 LLM calls. A forced 2nd redelivery → WF-10 4495 DUPLICATE_SKIPPED, still 1 claim
+- [ ] Silent-loss path 2 (L-016), **email door: fixed for n8n restarts, open for mail-server-only restarts (D-034).** WF-02 now runs with `trackLastMessageId: false` and `forceReconnect: 1`.
+  - The bug was re-created on the old config: an email sent with bookmark 39 was ignored. After the fix it was caught up 1 min after publishing (`app_000608`, WF-02 exec 4413); the original waiting email had been lost earlier, when GreenMail restarted.
+  - The node sets its UID bookmark again in memory after every batch, so a GreenMail restart while n8n keeps running still strands mail until WF-02 is re-published. Matrix `doors` row 2 ✗: not processed in 180 s; re-publishing WF-02 (the runbook) → processed 66 s later (`app_000615`, 0 LLM calls)
+  - **Learner decision:** accept the gap with the runbook, add a WF-02 re-publish watchdog (needs an n8n API key inside n8n), or change the intake at the Gmail step (D-034 options C/D/E)
 - [ ] Consistency (`~e2`, `~e3`), v1 vs v2 (59-record sample), final report
 - [ ] Final `npm test` + `npm run eval:smoke` as the regression check
 - [ ] Learner: read the confusion matrices and explain the biggest error pattern first
 
 ## Learner review pass (D-008), collected as we go
 - Concepts deferred: see LEARNING (`⏭`)
-- Decisions to confirm: D-014 to D-021, D-023 to D-025, D-028 to D-032 (`pending learner review`)
+- Decisions to confirm: D-014 to D-021, D-023 to D-025, D-028 to D-034 (`pending learner review`); D-034 also needs a choice for the open mail-server-restart gap
 - Profile review: the Admin v1 gaps above (missing PA titles, English, Office as a criterion rather than a must-have), and the csr anchors that credit sales evidence (role-switch finding). Decide whether to make v2s
 - Exercises: hello-items item-count prediction (Phase 0); find a loose field in the ScoreCard schema (Phase 1); spot-check 10 answer-key rows (Phase 2)
 
 ## Session log (newest first)
+### Side session · 2026-10-19 to 2026-10-23 · Phase 8 (L-016 fixes, run in the background)
+- Done: the CRM webhook delivery log (list + redeliver) with a migration; WF-04 Reconcile webhooks; WF-02 `trackLastMessageId: false` + `forceReconnect: 1`; matrix group `doors` (saves after every check)
+- Verified (evidence): `app_000607` final via WF-04; matrix `doors` 1/2 (row 2 is the known D-034 gap, recovered by the runbook); `npm test` 168/168; n8n matches git (11 workflows)
+- Not verified: Gmail behaviour (D-034 revisit); a backlog of more than 10 missed webhooks (designed for, not run)
+- Decisions: D-033, D-034 · Lessons: L-016 fix line, L-017
+- LLM calls: 0
+- Interruptions: Docker Desktop stopped three times. Causes: Windows sleep (17 Oct), quit from Docker's own menu (18 and 19 Oct, `actionMenuQuit`), and a stale `dockerInference` socket from unclean shutdowns that crashed its start (folder renamed to `run.stale-20261019`)
+
 ### S-02 (continued) · 2026-10-18 · Phase 8 (part 2, quota day 1 of Plan A)
 - Done: restarted the stack (Docker Desktop had stopped overnight); LLM-fault matrix rows 5/5; full dataset run `~e1`; interim eval report with Claude's analysis collapsed (`reports/eval-notes.md`); `scripts/lib/eval-sets.js` (fixed consistency and v1 subsets)
 - Verified (evidence): `reports/eval-2026-10-18.md`: pre-filter 253/253, status 245/253, records in = out, §5.4 9/11; matrix 18/18 live checks; 164 tests

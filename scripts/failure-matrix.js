@@ -2,26 +2,33 @@
 // Failure-injection matrix (brief §5.4, Phase 8): live checks for the rows that need the system to
 // misbehave on purpose. Rows proven by the full dataset run (file types, injection, name swap,
 // records in = out) and by the role-switch report are added by scripts/eval-report.js.
-//   node scripts/failure-matrix.js [--only dup,crm,llm,email,job,bias]
+//   node scripts/failure-matrix.js [--only dup,crm,llm,email,job,bias,doors]
 // Every check screens fresh copies (variant tags), never the dataset records.
 // LLM calls: about 9, all in the "llm" group (a strong csr CV screened under injected faults).
-// LLM faults and CRM chaos are always switched off at the end, even if a check crashes.
+// LLM faults and CRM chaos are always switched off at the end, even if a check crashes; the "doors"
+// group stops n8n and restarts GreenMail, and both are always started again.
 const fs = require('node:fs');
+const net = require('node:net');
 const path = require('node:path');
 const { execFile } = require('node:child_process');
 const nodemailer = require('nodemailer');
 const { ROOT, loadEnv, requireEnv } = require('./lib/env');
 const { crm } = require('./lib/crm-client');
+const { client: n8nClient } = require('./lib/n8n-api');
 const { loadApplicants } = require('./lib/dataset');
-const { variant, applicationBody, fire, waitSettled, runLog, llmProxy, sleep } = require('./lib/pipeline');
+const { OPEN, variant, applicationBody, fire, waitSettled, runLog, llmProxy, sleep } = require('./lib/pipeline');
 
 const args = process.argv.slice(2);
 const onlyIdx = args.indexOf('--only');
 const only = onlyIdx > -1 ? new Set(args[onlyIdx + 1].split(',')) : null;
 const want = (group) => !only || only.has(group);
 const stamp = Date.now().toString(36);
+const startedAt = new Date().toISOString();
+const reportFile = path.join(ROOT, 'reports', `failure-matrix-${startedAt.slice(0, 10)}${only ? `-${[...only].join('-')}` : ''}.json`);
 const results = [];
-const record = (r) => { results.push(r); console.log(`${r.pass ? '✓' : '✗'} [${r.group}] ${r.check}\n    expected: ${r.expected}\n    got:      ${r.actual}`); };
+// Saved after every check (L-013), so a crash or a killed run never loses finished checks.
+const save = (crashed = null) => fs.writeFileSync(reportFile, JSON.stringify({ at: new Date().toISOString(), stamp, groups: only ? [...only] : 'all', crashed, results }, null, 2) + '\n');
+const record = (r) => { results.push(r); save(); console.log(`${r.pass ? '✓' : '✗'} [${r.group}] ${r.check}\n    expected: ${r.expected}\n    got:      ${r.actual}`); };
 // Async on purpose: execFileSync froze the event loop for the length of a replay, the CRM closed its
 // idle keep-alive socket meanwhile, and the next fetch reused the dead socket ("fetch failed").
 const runScript = (script, ...a) => new Promise((resolve) => {
@@ -200,6 +207,135 @@ async function bias(api) {
     pass: open.length > 0 && disabled, evidence: { flags: open.map((f) => ({ category: f.category, phrase: f.phrase, target: f.target })) } });
 }
 
+// ---------------------------------------------------------------- the front doors (L-016)
+// The orchestrator and the stateful trigger sources fail too, not only what the pipeline calls.
+// Both checks use records that stop before the LLM (keyword fail, email without answers): 0 LLM calls.
+const N8N_CONTAINER = 'auto-score-n8n-1';
+const MAIL_CONTAINER = 'auto-score-greenmail-1';
+const DOOR_WAIT_MS = 300000; // n8n boot + one sweep interval (WF-04 runs every minute) + screening, with margin
+const MAIL_RESTART_WAIT_MS = 180000; // three of WF-02's forced reconnects (every minute), each one a catch-up fetch
+const docker = (...a) => new Promise((resolve, reject) => {
+  execFile('docker', a, { encoding: 'utf8', timeout: 120000 }, (err, stdout, stderr) => (err ? reject(new Error(`docker ${a.join(' ')}: ${(stderr || err.message).trim()}`)) : resolve(stdout.trim())));
+});
+async function waitHttp(url, timeoutMs) {
+  for (const end = Date.now() + timeoutMs; Date.now() < end; await sleep(2000)) {
+    try { if ((await fetch(url, { signal: AbortSignal.timeout(3000) })).ok) return true; } catch { /* still starting */ }
+  }
+  return false;
+}
+async function waitPort(port, timeoutMs = 60000) {
+  const open = () => new Promise((resolve) => { const s = net.connect(port, 'localhost'); s.once('connect', () => { s.destroy(); resolve(true); }); s.once('error', () => resolve(false)); });
+  for (const end = Date.now() + timeoutMs; Date.now() < end; await sleep(1000)) if (await open()) return true;
+  return false;
+}
+async function emailApplication(local, name, tag) {
+  const env = loadEnv();
+  const address = `${local}+${tag}@example.test`.toLowerCase(); // the CRM stores emails lowercased (L-017)
+  await nodemailer.createTransport({ host: env.MAIL_SMTP_HOST || 'localhost', port: Number(env.MAIL_SMTP_PORT || 3025), secure: false, ignoreTLS: true }).sendMail({
+    from: `${name} <${address}>`, to: 'applications+csr@autoscore.test', subject: 'Application', text: 'CV attached.', messageId: `<${tag}@autoscore.test>`,
+    envelope: { from: address, to: requireEnv('MAIL_USER') },
+    attachments: [{ filename: 'csr_medium.txt', path: path.join(ROOT, 'data', 'email_samples', 'csr_medium.txt') }] });
+  return address;
+}
+async function recordsByEmail(api, email) {
+  const { total } = await api.listCandidates({ limit: 1 });
+  return (await api.listCandidates({ limit: 200, offset: Math.max(0, total - 200) })).items.filter((c) => c.candidate.email === email);
+}
+const deliveriesOf = async (api, id) => (await api.call('GET', `/webhook-deliveries?event=application.created&subject_id=${id}`)).items;
+// Polls until every check returns a record that is no longer NEW/SCREENING (L-008), or the time is up.
+async function waitFinal(checks, timeoutMs) {
+  for (const end = Date.now() + timeoutMs; ; await sleep(5000)) {
+    const got = await Promise.all(checks.map((f) => f()));
+    if (got.every((c) => c && !OPEN.has(c.status)) || Date.now() > end) return got;
+  }
+}
+const claims = (c) => c.history.filter((h) => h.to_status === 'SCREENING').length;
+// Cleanup: the mail-restart check unpublishes and publishes WF-02; a crash in between must not leave it off.
+async function republishIfOff(name) {
+  if (!(await waitHttp('http://localhost:5678/healthz', 180000))) throw new Error('n8n not healthy');
+  const n8n = n8nClient();
+  const wf = (await n8n.listWorkflows()).find((w) => w.name === name);
+  if (wf && !wf.active) { await n8n.publishWorkflow(wf.id); console.log(`re-published ${name}`); }
+}
+// Summed over every RunLog of the record, so a skipped duplicate run can't hide the calls of the real one.
+const llmCalls = async (api, id) => {
+  const logs = await api.call('GET', `/run-logs?application_id=${id}`);
+  return logs.length ? logs.reduce((n, l) => n + l.llm.calls, 0) : null;
+};
+
+async function doors(api, data) {
+  // 1. n8n stopped for about 20 s while one application arrives through each door.
+  const row = data.find((a) => a.job_id === 'csr' && a.trait === 'no_relevant_keywords');
+  const t0 = Date.now();
+  let app; let email; let failedBefore = null;
+  await docker('stop', N8N_CONTAINER);
+  try {
+    ({ application: app } = await api.createApplication(applicationBody(variant(row, `doorA${stamp}`)), { notify: true }));
+    email = await emailApplication('robin.okafor', 'Robin Okafor', `doorB${stamp}`);
+    for (let i = 0; i < 20 && !failedBefore; i++) { await sleep(1000); failedBefore = (await deliveriesOf(api, app.application_id)).find((d) => d.state === 'failed') || null; }
+    await sleep(Math.max(0, 20000 - (Date.now() - t0)));
+  } finally {
+    await docker('start', N8N_CONTAINER);
+  }
+  const down = Math.round((Date.now() - t0) / 1000);
+  const healthy = await waitHttp('http://localhost:5678/healthz', 180000);
+  const tUp = Date.now();
+  const [c, m] = await waitFinal([
+    () => api.getCandidate(app.application_id, true),
+    async () => (await recordsByEmail(api, email))[0] || null,
+  ], DOOR_WAIT_MS);
+  const after = (Date.now() - tUp) / 1000;
+  const delivery = (await deliveriesOf(api, app.application_id))[0];
+  const mails = await recordsByEmail(api, email);
+  const calls = [await llmCalls(api, app.application_id), m ? await llmCalls(api, m.application_id) : null];
+  // A second redelivery of the same event must change nothing (WF-10's compare-and-set claim).
+  const forced = await api.call('POST', `/webhook-deliveries/${delivery.id}/redeliver`, { force: true }).catch((e) => ({ state: `error ${e.status}` }));
+  await sleep(15000);
+  const c2 = await api.getCandidate(app.application_id, true);
+  record({ group: 'doors', row: 'Orchestrator down while applications arrive → nothing lost (L-016)', check: `n8n stopped for ${down} s while 1 CRM application (webhook) and 1 email arrive; then started again`,
+    expected: 'webhook failed every CRM retry; WF-04 redelivers it → PREFILTER_REJECTED; the email waits UNSEEN → 1 record NEEDS_REVIEW MISSING_ANSWER; a forced 2nd redelivery changes nothing (1 claim); 0 LLM calls',
+    actual: `n8n ${healthy ? 'healthy' : 'NOT healthy'}; delivery before: ${failedBefore ? `failed after ${failedBefore.attempts} tries (${failedBefore.error})` : 'not failed'}, after: ${delivery.state}, ${delivery.attempts} attempts`
+      + ` · CRM door: ${c.status} · email door: ${mails.length} record, ${m ? `${m.status} ${(m.result.reason_codes || []).join(',')}` : 'none'} · both final ${Math.round(after)} s after restart`
+      + ` · forced redelivery: ${forced.state}, then ${c2.status} with ${claims(c2)} claim · LLM calls ${calls.join('/')}`,
+    pass: Boolean(failedBefore) && delivery.state === 'delivered' && Boolean(delivery.redelivered_at) && c.status === 'PREFILTER_REJECTED'
+      && mails.length === 1 && m.status === 'NEEDS_REVIEW' && m.job_id === 'csr' && (m.result.reason_codes || []).includes('MISSING_ANSWER')
+      && c2.status === 'PREFILTER_REJECTED' && claims(c2) === 1 && calls.every((n) => n === 0),
+    evidence: { application_id: app.application_id, email_application_ids: mails.map((x) => x.application_id), delivery, history: c2.history, down_s: down, final_after_restart_s: Math.round(after) } });
+
+  // 2. The mail server restarts while n8n keeps running (GreenMail keeps mail in memory: UIDs start
+  // again at 1), then mail arrives. The IMAP trigger keeps a UID bookmark in memory for as long as
+  // WF-02 stays active, so this is the case configuration can't fix (D-034). The check asks for the
+  // email to be processed with no help; if it isn't, it applies the runbook step (re-publish WF-02,
+  // which clears the bookmark) so the email is never left stranded, and reports both.
+  await docker('restart', MAIL_CONTAINER);
+  if (!(await waitPort(Number(loadEnv().MAIL_SMTP_PORT || 3025)) && await waitPort(3143))) throw new Error('GreenMail did not open its ports within 60 s');
+  let email2 = null;
+  for (let i = 0; i < 10 && !email2; i++) { try { email2 = await emailApplication('sam.ito', 'Sam Ito', `doorC${stamp}`); } catch { await sleep(2000); } } // SMTP lags the port by a moment
+  if (!email2) throw new Error('could not send to GreenMail after its restart');
+  const tMail = Date.now();
+  const byEmail2 = async () => (await recordsByEmail(api, email2))[0] || null;
+  let [m2] = await waitFinal([byEmail2], MAIL_RESTART_WAIT_MS);
+  const unaided = Boolean(m2);
+  let runbook = null;
+  if (!unaided) {
+    const n8n = n8nClient();
+    const wf02 = (await n8n.listWorkflows()).find((w) => w.name === 'WF-02 Intake email');
+    await n8n.unpublishWorkflow(wf02.id);
+    await n8n.publishWorkflow(wf02.id);
+    const tRunbook = Date.now();
+    [m2] = await waitFinal([byEmail2], DOOR_WAIT_MS);
+    runbook = m2 ? `processed ${Math.round((Date.now() - tRunbook) / 1000)} s after re-publishing WF-02` : 'still not processed after re-publishing WF-02';
+  }
+  const mails2 = await recordsByEmail(api, email2);
+  const calls2 = m2 ? await llmCalls(api, m2.application_id) : null;
+  record({ group: 'doors', row: 'Mail server restarted → no email lost (L-016)', check: 'GreenMail restarted while n8n keeps running (UIDs start again at 1), then 1 email arrives',
+    expected: `processed with no help within ${MAIL_RESTART_WAIT_MS / 1000} s: 1 record, job csr, NEEDS_REVIEW incl. MISSING_ANSWER, 0 LLM calls`,
+    actual: unaided ? `${mails2.length} record, job ${m2.job_id}, ${m2.status} ${(m2.result.reason_codes || []).join(',')}, ${calls2} LLM calls, ${Math.round((Date.now() - tMail) / 1000)} s after sending`
+      : `not processed in ${MAIL_RESTART_WAIT_MS / 1000} s (stale in-memory UID bookmark, D-034) · runbook: ${runbook}${m2 ? ` → ${mails2.length} record, ${m2.status} ${(m2.result.reason_codes || []).join(',')}, ${calls2} LLM calls` : ''}`,
+    pass: unaided && mails2.length === 1 && m2.job_id === 'csr' && m2.status === 'NEEDS_REVIEW' && (m2.result.reason_codes || []).includes('MISSING_ANSWER') && calls2 === 0,
+    evidence: { application_ids: mails2.map((x) => x.application_id), unaided, runbook } });
+}
+
 // A bare "fetch failed" hides the real cause (ECONNREFUSED, ECONNRESET…) in e.cause.
 const describe = (e) => `${e.message}${e.cause ? ` (${e.cause.code || e.cause.message})` : ''}`;
 
@@ -208,20 +344,21 @@ async function main() {
   const data = loadApplicants();
   let crashed = null;
   try {
-    for (const [group, fn] of [['dup', dup], ['job', jobs], ['bias', bias], ['email', emails], ['llm', llmFaults], ['crm', crmFaults]]) {
+    for (const [group, fn] of [['dup', dup], ['job', jobs], ['bias', bias], ['email', emails], ['llm', llmFaults], ['crm', crmFaults], ['doors', doors]]) {
       if (!want(group)) continue;
       try { await fn(api, data); } catch (e) { crashed = `${group}: ${describe(e)}`; console.error(`✗ [${group}] crashed: ${describe(e)}\n${e.stack}`); break; }
     }
   } finally {
     await llmProxy().off().catch(() => {});
     await api.chaos({ fail_rate: 0, latency_ms: 0, fail_after_rate: 0 }).catch(() => {});
+    if (want('doors')) {
+      await docker('start', N8N_CONTAINER, MAIL_CONTAINER).catch((e) => console.error(`could not start the containers again: ${e.message}`));
+      await republishIfOff('WF-02 Intake email').catch((e) => console.error(`could not check WF-02: ${e.message}`));
+    }
   }
-  // Saved even after a crash, so finished checks are never lost.
-  const at = new Date().toISOString();
-  const file = path.join(ROOT, 'reports', `failure-matrix-${at.slice(0, 10)}${only ? `-${[...only].join('-')}` : ''}.json`);
-  fs.writeFileSync(file, JSON.stringify({ at, stamp, groups: only ? [...only] : 'all', crashed, results }, null, 2) + '\n');
+  save(crashed); // also after a crash, with the reason
   const passed = results.filter((r) => r.pass).length;
-  console.log(`failure matrix: ${passed}/${results.length} checks passed${crashed ? ` · CRASHED in ${crashed}` : ''} · saved ${path.relative(ROOT, file)}`);
+  console.log(`failure matrix: ${passed}/${results.length} checks passed${crashed ? ` · CRASHED in ${crashed}` : ''} · saved ${path.relative(ROOT, reportFile)}`);
   if (crashed || passed !== results.length) process.exit(1);
 }
 

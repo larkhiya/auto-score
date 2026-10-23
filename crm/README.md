@@ -40,7 +40,9 @@ AI outcomes ──► SCREENING                              re-screen (e.g. aft
 | GET | `/review-queue` | NEEDS_REVIEW candidates |
 | POST/GET | `/dead-letters`, `POST /dead-letters/:id/replayed` | **unused since D-028**: the dead-letter queue lives in n8n (Data Table `dead_letters`) so it stays writable when the CRM is down |
 | POST/GET | `/run-logs` | RunLog per execution (contract-validated) |
-| GET | `/stats` | counts by job and status, open dead letters, webhook deliveries |
+| GET | `/stats` | counts by job and status, open dead letters, webhook deliveries (total, delivered, failed) |
+| GET | `/webhook-deliveries?event=&status=failed\|pending\|delivered&subject_id=&limit=` | the webhook delivery log, least recently tried first (D-033) |
+| POST | `/webhook-deliveries/:id/redeliver` | one more attempt: same `event_id`, the subject's current state, `redelivery: true`. `409 ALREADY_DELIVERED` unless `{"force": true}` |
 | GET/POST | `/admin/chaos` | `{fail_rate, latency_ms, fail_after_rate}` at runtime |
 | POST | `/admin/reset` | `{confirm:"delete-all-candidates"}`: test harness only (`scripts/reset-crm.js --yes`) |
 
@@ -55,7 +57,9 @@ AI outcomes ──► SCREENING                              re-screen (e.g. aft
 - `{event: "application.created", event_id, occurred_at, application}`
 - `{event: "job.draft_requested", event_id, occurred_at, job: {job_id, title, jd_text}}`
 
-Delivery is retried 3 times with backoff on 5xx, 429 or timeout, and every attempt is recorded (`/stats`). Webhooks are at-least-once, which is why the receiver must be idempotent.
+Delivery is retried 3 times with backoff on 5xx, 429 or timeout (about 2 s in all), and every delivery is logged with its subject (the application or job it announced). Webhooks are at-least-once, which is why the receiver must be idempotent.
+
+A delivery that never got a 2xx stays in the log as `failed` (also one with no result after 60 s: the sender died mid-retry). Like the delivery logs of GitHub or Stripe, it can be listed and redelivered; WF-04 does that every minute (D-033). A redelivery is a thin event: it carries the subject's state at the time of redelivery, so the receiver must not assume the record is still new (WF-10's compare-and-set claim decides). Records created with `notify=false` were never announced, so they are never in the log.
 
 ### Failure simulation (Phase 6 and 8)
 | Setting | Effect |

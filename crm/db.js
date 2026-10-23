@@ -81,10 +81,27 @@ CREATE TABLE IF NOT EXISTS run_logs (
 CREATE TABLE IF NOT EXISTS webhook_deliveries (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   event TEXT NOT NULL, event_id TEXT NOT NULL, target TEXT NOT NULL,
+  subject_id TEXT,
   attempts INTEGER NOT NULL DEFAULT 0, status_code INTEGER, error TEXT,
-  created_at TEXT NOT NULL, delivered_at TEXT
+  created_at TEXT NOT NULL, delivered_at TEXT, redelivered_at TEXT
 );
 `;
+
+// Deliveries recorded before subject_id existed: link each FAILED application.created row to the
+// application it announced. The row is inserted in the same tick as the record (service.createApplication
+// → onEvent → INSERT, no await in between), so its subject is the latest crm-sourced record created at
+// or before it, within a second. A record with the very same millisecond could have come right after
+// the row, so a tie there counts as ambiguous. Unmatched rows stay unlinked (listed, not redeliverable).
+// Delivered rows don't need a subject.
+function backfillDeliverySubjects(db) {
+  const rows = db.prepare("SELECT id, created_at FROM webhook_deliveries WHERE event = 'application.created' AND subject_id IS NULL AND delivered_at IS NULL").all();
+  for (const r of rows) {
+    const from = new Date(Date.parse(r.created_at) - 1000).toISOString();
+    const [latest, previous] = db.prepare("SELECT application_id, created_at FROM candidates WHERE source = 'crm' AND created_at >= ? AND created_at <= ? ORDER BY seq DESC LIMIT 2").all(from, r.created_at);
+    if (!latest || (latest.created_at === r.created_at && previous && previous.created_at === r.created_at)) continue;
+    db.prepare('UPDATE webhook_deliveries SET subject_id = ? WHERE id = ?').run(latest.application_id, r.id);
+  }
+}
 
 function open(path = ':memory:') {
   const db = new DatabaseSync(path);
@@ -93,6 +110,10 @@ function open(path = ':memory:') {
   // Migrations for columns added after a database was created (CREATE TABLE IF NOT EXISTS won't add them).
   const jobCols = db.prepare('PRAGMA table_info(jobs)').all().map((c) => c.name);
   if (!jobCols.includes('draft_error')) db.exec('ALTER TABLE jobs ADD COLUMN draft_error TEXT');
+  const hookCols = db.prepare('PRAGMA table_info(webhook_deliveries)').all().map((c) => c.name);
+  if (!hookCols.includes('subject_id')) db.exec('ALTER TABLE webhook_deliveries ADD COLUMN subject_id TEXT');
+  if (!hookCols.includes('redelivered_at')) db.exec('ALTER TABLE webhook_deliveries ADD COLUMN redelivered_at TEXT');
+  backfillDeliverySubjects(db);
   return db;
 }
 

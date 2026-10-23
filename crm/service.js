@@ -19,7 +19,11 @@ const P = (s) => (s === null || s === undefined ? null : JSON.parse(s));
 const SCORED = ['SHORTLISTED', 'MAYBE', 'NOT_A_FIT'];
 const JOB_ID = /^[a-z][a-z0-9_-]{1,31}$/;
 
-function createService(db, { onEvent = () => {} } = {}) {
+// After this long without a result, a delivery is treated as failed: the sender died mid-retry
+// (CRM restarted). Longer than one full retry cycle (3 × 5 s timeout + backoff).
+const STALE_DELIVERY_MS = 60000;
+
+function createService(db, { onEvent = () => {}, onRedeliver = null } = {}) {
   const one = (sql, ...a) => db.prepare(sql).get(...a);
   const all = (sql, ...a) => db.prepare(sql).all(...a);
   const run = (sql, ...a) => db.prepare(sql).run(...a);
@@ -359,6 +363,61 @@ function createService(db, { onEvent = () => {} } = {}) {
     return rows.map((r) => P(r.log_json));
   }
 
+  // ------------------------------------------------------- webhook delivery log
+  // failed    = finished without a 2xx, or never finished (older than STALE_DELIVERY_MS, no attempt recorded)
+  // pending   = the sender is still retrying
+  // delivered = some attempt got a 2xx
+  function deliveryState(d) {
+    if (d.delivered_at) return 'delivered';
+    if (d.attempts > 0 || Date.now() - Date.parse(d.created_at) > STALE_DELIVERY_MS) return 'failed';
+    return 'pending';
+  }
+  const toDelivery = (d) => ({ ...d, state: deliveryState(d) });
+
+  function listWebhookDeliveries({ event, status, subject_id, limit = 50 } = {}) {
+    if (status && !['failed', 'pending', 'delivered'].includes(status)) throw new HttpError(422, 'BAD_STATUS', 'status must be failed, pending or delivered');
+    const where = [];
+    const args = [];
+    if (event) { where.push('event = ?'); args.push(event); }
+    if (subject_id) { where.push('subject_id = ?'); args.push(subject_id); }
+    if (status === 'delivered') where.push('delivered_at IS NOT NULL');
+    else if (status) where.push('delivered_at IS NULL');
+    const w = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const lim = Math.min(Math.max(Number(limit) || 50, 1), 500);
+    // Least recently tried first: a job that takes a page at a time works through the backlog, and a
+    // delivery that keeps failing moves to the back instead of blocking the ones behind it.
+    let items = all(`SELECT * FROM webhook_deliveries ${w} ORDER BY COALESCE(redelivered_at, created_at), id`, ...args).map(toDelivery);
+    if (status) items = items.filter((d) => d.state === status);
+    return { total: items.length, limit: lim, items: items.slice(0, lim) };
+  }
+
+  // The event's payload rebuilt from the subject's CURRENT state (a thin event: the receiver must
+  // not trust that state to still be "new"; WF-10's compare-and-set claim decides).
+  function eventPayload(d) {
+    if (!d.subject_id) throw new HttpError(422, 'NO_SUBJECT', `delivery ${d.id} was logged without a subject and can't be rebuilt`);
+    if (d.event === 'application.created') {
+      const r = rowById(d.subject_id);
+      if (!r) throw new HttpError(404, 'CANDIDATE_NOT_FOUND', `no candidate "${d.subject_id}"`);
+      return { application: toApi(r) };
+    }
+    if (d.event === 'job.draft_requested') {
+      const job = requireJob(d.subject_id);
+      return { job: { job_id: job.job_id, title: job.title, jd_text: job.jd_text } };
+    }
+    throw new HttpError(422, 'UNKNOWN_EVENT', `can't redeliver ${d.event}`);
+  }
+
+  // Sends a logged delivery again (one attempt). An already delivered one needs force, so two
+  // overlapping reconciliation runs can't both re-send it.
+  async function redeliverWebhook(id, { force = false } = {}) {
+    const d = one('SELECT * FROM webhook_deliveries WHERE id = ?', Number(id));
+    if (!d) throw new HttpError(404, 'DELIVERY_NOT_FOUND', `no webhook delivery ${id}`);
+    if (d.delivered_at && !force) throw new HttpError(409, 'ALREADY_DELIVERED', `delivery ${id} was delivered at ${d.delivered_at}`, { delivered_at: d.delivered_at });
+    if (!onRedeliver) throw new HttpError(503, 'WEBHOOKS_DISABLED', 'this CRM has no webhook sender');
+    await onRedeliver(d, eventPayload(d));
+    return toDelivery(one('SELECT * FROM webhook_deliveries WHERE id = ?', d.id));
+  }
+
   // Test harness only: removes every candidate and its history so a fresh dataset can be seeded.
   // Job profiles are kept. Guarded by a confirm phrase at the API and --yes in scripts/reset-crm.js.
   function resetCandidates() {
@@ -380,14 +439,14 @@ function createService(db, { onEvent = () => {} } = {}) {
       by_job: byJob,
       run_logs: one('SELECT COUNT(*) AS n FROM run_logs').n,
       dead_letters_open: one('SELECT COUNT(*) AS n FROM dead_letters WHERE replayed_at IS NULL').n,
-      webhooks: one('SELECT COUNT(*) AS total, SUM(delivered_at IS NOT NULL) AS delivered FROM webhook_deliveries'),
+      webhooks: { ...one('SELECT COUNT(*) AS total, SUM(delivered_at IS NOT NULL) AS delivered FROM webhook_deliveries'), failed: listWebhookDeliveries({ status: 'failed' }).total },
     };
   }
 
   return {
     seedJobs, listJobs, getApprovedProfile, getVersion, getDraft, createJob, requestRedraft, recordDraftFailure, saveDraft, editDraft, resolveBiasFlag, approveDraft,
     createApplication, getCandidate, listCandidates, patchCandidate,
-    addDeadLetter, listDeadLetters, markReplayed, addRunLog, listRunLogs, stats, resetCandidates,
+    addDeadLetter, listDeadLetters, markReplayed, addRunLog, listRunLogs, listWebhookDeliveries, redeliverWebhook, stats, resetCandidates,
     allowedHumanActions: (status) => state.allowedNext(status, state.ACTORS.HUMAN),
   };
 }

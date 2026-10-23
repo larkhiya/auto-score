@@ -1,6 +1,6 @@
 # Architecture
 
-Adjusted from brief §3.1 for these decisions: D-007 (Gemini), D-011 (GreenMail), dedupe in the CRM, and email calling WF-10 directly with the webhook suppressed.
+Adjusted from brief §3.1 for these decisions: D-007 (Gemini), D-011 (GreenMail), dedupe in the CRM, email calling WF-10 directly with the webhook suppressed, and a reconciliation sweep for webhooks n8n missed (D-033).
 
 ```mermaid
 flowchart LR
@@ -13,8 +13,10 @@ flowchart LR
 
   subgraph triggers["Triggers"]
     A["WF-01 · CRM webhook<br/>POST /webhook/application-received<br/>x-webhook-secret checked"]
-    B["WF-02 · IMAP trigger<br/>GreenMail now, Gmail later (D-011)"]
+    B["WF-02 · IMAP trigger<br/>GreenMail now, Gmail later (D-011)<br/>UNSEEN, no UID bookmark, catch-up every minute (D-034)"]
+    RC["WF-04 · every minute<br/>CRM failed webhook deliveries<br/>→ ask the CRM to redeliver (D-033)"]
   end
+  RC -.->|"CRM re-sends the same<br/>application.created"| A
 
   B --> X["WF-03 per email: parse · job from plus-address<br/>extract CV text (PDF/TXT/DOCX) · create CRM record<br/>(webhook suppressed, Message-ID dedupe)"]
   A --> N["normalize → ApplicationReceived"]
@@ -51,7 +53,8 @@ flowchart LR
 |---|---|---|---|
 | WF-00 | Hello items | `workflows/00-hello.json` | Phase 0 teaching workflow |
 | WF-01 | Intake: CRM webhook | `workflows/01-intake-webhook.json` | header-auth webhook (403 on a wrong secret); responds 202 at once; normalizes; calls WF-10 |
-| WF-02 | Intake: email trigger | `workflows/02-intake-email.json` | IMAP trigger (GreenMail now, Gmail later); one WF-03 execution per email, failures captured per email (D-023) |
+| WF-02 | Intake: email trigger | `workflows/02-intake-email.json` | IMAP trigger (GreenMail now, Gmail later); UNSEEN with no UID bookmark across restarts, reconnect + catch-up every minute (D-034); one WF-03 execution per email, failures captured per email (D-023) |
+| WF-04 | Reconcile missed webhooks | `workflows/04-reconcile-webhooks.json` | every minute: the CRM's failed `application.created` deliveries (10 per run) → `POST /webhook-deliveries/:id/redeliver` → the CRM re-sends to WF-01; WF-10's claim skips anything already screened. Successful runs aren't saved (D-033) |
 | WF-03 | One email → application | `workflows/03-email-to-application.json` | parse sender and plus-address → extract PDF/TXT/DOCX text → create CRM record (no webhook, Message-ID dedupe) → normalize → WF-10 |
 | WF-11 | CRM call with retry policy | `workflows/11-crm-request.json` | every CRM call goes through here: backoff on 429/5xx/timeouts, never on other 4xx (D-024) |
 | WF-05 | Job profile builder | `workflows/05-job-profile-builder.json` | JD → LLM draft → checks → DRAFT |
@@ -60,7 +63,7 @@ flowchart LR
 | WF-90 | Error handler | `workflows/90-error-handler.json` | Error Trigger → WF-91, for uncaught crashes (error workflow of WF-01 and WF-02) |
 | WF-91 | Dead letter | `workflows/91-dead-letter.json` | n8n Data Table `dead_letters` (works while the CRM is down) + best-effort CRM ERROR + email to ops + RunLog (D-028) |
 | Replay | Dead-letter replay | `scripts/replay-dlq.js` | open rows → ERROR → `application.replay` → WF-10 reclaims ERROR→SCREENING; idempotent |
-| CRM | Mock CRM | `crm/` | Node 24 + Express + `node:sqlite`; REST, webhooks, pages, failure simulation |
+| CRM | Mock CRM | `crm/` | Node 24 + Express + `node:sqlite`; REST, webhooks with a delivery log (list failed, redeliver: D-033), pages, failure simulation |
 | Proxy | LLM proxy | `llm-proxy/` · Compose service `llm-proxy` | between WF-12 and Gemini: forwards unchanged; `/admin/chaos` arms rate_limit / server_error / invalid_json / timeout for the next N calls (D-031); never logs the key |
 | Eval | Evaluation tooling | `scripts/eval-smoke.js`, `failure-matrix.js`, `eval-report.js`, `role-switch-report.js` | regression smoke (5 per role), §5.4 failure-injection matrix, `reports/eval-<date>.md` |
 | src | Pure logic | `src/` | inlined into Code nodes by `scripts/build-workflows.js` (drift-tested) |
