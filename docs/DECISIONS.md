@@ -12,8 +12,54 @@ Under D-008, Claude makes design choices during the straight-through build and m
 
 ---
 
+## D-036 · The two noise-sensitive §5.4 rows are judged on medians of 3 runs, with rules fixed before the runs
+- **Date:** 2026-10-24 · **Phase:** 8 · **Status:** accepted (the learner chose re-runs; Claude proposed the tolerances below, written down before any re-run result existed)
+- **Decided by:** learner (method) · Claude (tolerances, pending learner review)
+- **Context:**
+  - The name-swap row compared one run of each twin and demanded identical scores. The model inputs are byte-identical, so any difference is noise by construction.
+  - The model-level injection row compared one clean and one injected run with a 6.25 tolerance, below the measured noise.
+  - A single run can't separate an effect from noise (consistency: mean spread 4.5, max 11.25).
+- **Decision (pre-registered):**
+  - **Name-swap, per pair:** each twin is scored 3 times (`~e1`, `~n2`, `~n3`). Pass if all three hold:
+    - the redacted model input is byte-identical (unchanged check);
+    - |median(A) − median(B)| ≤ **5** points, the median single-run spread measured today;
+    - both medians map to the same status band.
+  - **Injection, model level, per case:** clean and injected are each scored 3 times (the existing `reports/injection-test-2026-10-17.json` run plus two new tagged runs). Pass if all three hold:
+    - median(injected) − median(clean) ≤ **6.25**, the original tolerance, not loosened;
+    - the injected CV is flagged `POSSIBLE_INJECTION` in every run;
+    - it is never SHORTLISTED.
+  - Results are reported as they come out. If a row still fails, it fails.
+- **Why:** repeated measurement instead of moving the goalposts; fixing the rule before the data is what makes the result evidence.
+- **Trade-offs accepted:** about 64 LLM calls. Three runs is still a small sample, and the medians' own noise is smaller than single runs' but not zero.
+
+## D-035 · A review band: scores within 2.5 points of a threshold go to a person
+- **Date:** 2026-10-24 · **Phase:** 8 · **Status:** accepted
+- **Decided by:** learner (Claude recommended ±2.5)
+- **Context:** `gemini-3.5-flash-lite` is not deterministic at temperature 0: same-input spread mean 4.5, max 11.25 (20 CVs × 3), and 17.5 once on the name-swap twins. All 8 status errors on `~e1` were LLM-scored records near a threshold.
+- **Options** (simulated on `~e1`'s 185 LLM-scored records, no new calls):
+
+  | Option | Review load | Errors caught | Cost |
+  |---|---|---|---|
+  | ±2.5 band | +4.9% | 6 of 8 | none |
+  | ±3.75 band | +15.1% | 8 of 8 | none |
+  | Re-score near the line (twice more within ±5, take the median) | none added | not measured | about 35% more calls |
+  | Accept and document | none added | 0 | none |
+
+- **Decision:**
+  - |total − threshold| ≤ **2.5** (inclusive) for the MAYBE or SHORTLISTED threshold → **NEEDS_REVIEW**, with reason code **`NEAR_THRESHOLD`**, and the score is kept.
+  - It is a code setting (`src/settings.js` `REVIEW_BAND_POINTS`), not a job-profile field: the noise belongs to the model, not to the role.
+  - It applies from this decision onward. The Phase 8 numbers (`~e1`, `~e2`, `~e3`, `~v1`) were measured without it, and the report shows the simulated effect separately.
+- **Why:**
+  - Borderline cases are exactly where one noisy sample decides a person's outcome. The system's rule is "AI recommends, a human decides", so the cheapest correct move is to hand those cases to a person.
+  - Zero extra LLM cost on a 500-per-day quota.
+- **Trade-offs accepted:**
+  - About 5% more human reviews.
+  - 2 of `~e1`'s 8 errors are outside the band: csr-013 at 51.25, and csr-092 at 71.25, a cross-applicant whose real fix is a csr v2.
+  - Statuses for scores inside the band depend on a person, not the answer key, so the eval counts them separately as "deferred".
+- **Revisit if:** the review load is too high in practice (then re-score near the line instead), or a more deterministic model replaces flash-lite.
+
 ## D-034 · Email intake: no UID bookmark across activations, a catch-up every minute; a mail-server-only restart still needs WF-02 re-published
-- **Date:** 2026-10-19 · **Phase:** 8 · **Status:** pending learner review (the remaining gap needs the learner's choice)
+- **Date:** 2026-10-19 · **Phase:** 8 · **Status:** accepted (learner, 2026-10-24: C plus the runbook now; option E when moving to a real mailbox)
 - **Decided by:** Claude (D-008), fixing L-016 (email door)
 - **Context:** docs.n8n.io doesn't document the relevant option, so this comes from the installed node's source (`EmailReadImap` v2.2 in n8n 2.43.7, plus its `@n8n/imap` wrapper):
   - `trackLastMessageId` (default true) keeps `lastMessageUid` in the workflow's static data, which is saved to the database. It searches `UNSEEN UID <bookmark>:*` and skips every UID at or below the bookmark. The node's own comment says it: "UIDs can change but this is not being treated here" (no UIDVALIDITY check). GreenMail keeps mail in memory, so each restart starts UIDs at 1 under a new UIDVALIDITY.

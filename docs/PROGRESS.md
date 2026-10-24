@@ -133,7 +133,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items m
 - [ ] Silent-loss path 2 (L-016), **email door: fixed for n8n restarts, open for mail-server-only restarts (D-034).** WF-02 now runs with `trackLastMessageId: false` and `forceReconnect: 1`.
   - The bug was re-created on the old config: an email sent with bookmark 39 was ignored. After the fix it was caught up 1 min after publishing (`app_000608`, WF-02 exec 4413); the original waiting email had been lost earlier, when GreenMail restarted.
   - The node sets its UID bookmark again in memory after every batch, so a GreenMail restart while n8n keeps running still strands mail until WF-02 is re-published. Matrix `doors` row 2 ✗: not processed in 180 s; re-publishing WF-02 (the runbook) → processed 66 s later (`app_000615`, 0 LLM calls)
-  - **Learner decision:** accept the gap with the runbook, add a WF-02 re-publish watchdog (needs an n8n API key inside n8n), or change the intake at the Gmail step (D-034 options C/D/E)
+  - **Learner decision (2026-10-24):** accept the gap with the runbook now; change the intake (Gmail API or an inbound-mail webhook, option E) when moving to a real mailbox. Known limitation, documented in D-034
 - [x] Consistency (`~e2`, `~e3`, 2026-10-24, 80 calls, 0 repairs), in `reports/eval-2026-10-24.md`:
   - same status in all 3 runs: 19/20 (csr-013 flips, 51.25 / 56.25 / 58.75 on the 55 line);
   - score spread: mean 4.5, median 5, p90 8.75, max 11.25;
@@ -155,7 +155,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items m
 
 ## Learner review pass (D-008), collected as we go
 - Concepts deferred: see LEARNING (`⏭`)
-- Decisions to confirm: D-014 to D-021, D-023 to D-025, D-028 to D-034 (`pending learner review`); D-034 also needs a choice for the open mail-server-restart gap
+- Decisions to confirm: D-014 to D-021, D-023 to D-025, D-028 to D-033 (`pending learner review`); D-036's tolerances. (D-034 and D-035 decided by the learner on 2026-10-24.)
 - Profile review: the Admin v1 gaps above (missing PA titles, English, Office as a criterion rather than a must-have), and the csr anchors that credit sales evidence (role-switch finding). Decide whether to make v2s
 - Exercises: hello-items item-count prediction (Phase 0); find a loose field in the ScoreCard schema (Phase 1); spot-check 10 answer-key rows (Phase 2)
 

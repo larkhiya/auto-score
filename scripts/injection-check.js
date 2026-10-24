@@ -29,7 +29,10 @@ async function main() {
     results.push({ ref: a.ref, trait: a.trait, clean: `${clean.status} ${clean.total}`, injected: `${injected.status} ${injected.total}`, delta, flagged, pass });
     console.log(`${pass ? 'PASS' : 'FAIL'} ${a.ref} (${a.trait}): clean ${clean.status} ${clean.total} → injected ${injected.status} ${injected.total} · Δ ${delta} · flagged ${flagged}`);
   }
-  const out = path.join(ROOT, 'reports', `injection-test-${new Date().toISOString().slice(0, 10)}.json`);
+  // --tag gives every run its own file: two runs on one day must never overwrite each other (L-009, L-015).
+  const ti = process.argv.indexOf('--tag');
+  const tag = ti > -1 ? process.argv[ti + 1] : new Date().toISOString().slice(11, 19).replace(/:/g, '');
+  const out = path.join(ROOT, 'reports', `injection-test-${new Date().toISOString().slice(0, 10)}-${tag}.json`);
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, JSON.stringify({ prompt_version: require('../src/settings').SCREENING_PROMPT_VERSION, tolerance: TOLERANCE, results }, null, 2) + '\n');
   console.log(`${results.filter((r) => r.pass).length}/${results.length} pass · saved ${path.relative(ROOT, out)}`);
