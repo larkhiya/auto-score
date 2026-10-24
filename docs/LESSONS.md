@@ -14,6 +14,15 @@ Template:
 
 ---
 
+## L-018 · Our docs said the Gemini quota day resets at 00:00 UTC; it resets at midnight Pacific
+- **Date:** 2026-10-24 (UTC) · **Phase:** 8 · **Who:** Claude
+- **What happened:** PROGRESS planned the next quota day as "after 00:00 UTC". Google's rate-limits page says: "Requests per day (RPD) quotas reset at midnight Pacific time" (07:00 UTC while PDT is in force, 08:00 UTC after 1 Nov). It also says limits apply per project, not per key.
+- **Symptom:** caught while preparing today's runs, before any of them started (no run was cut short by it).
+- **Root cause:** L-014 took the limit (500 per day) from the 429 body, which is the provider. The reset time was assumed, not read.
+- **Fix:** PROGRESS corrected; today's runs are planned to finish before 07:00 UTC.
+- **Prevention rule:** L-014 widened in CLAUDE.md: read both the limit and its reset time from the provider. → promoted: yes
+- **Concept it illustrates:** C-29 (rate limits)
+
 ## L-017 · My new matrix check looked up a mixed-case email the CRM stores lowercased
 - **Date:** 2026-10-19 · **Phase:** 8 · **Who:** Claude
 - **What happened:** the first run of the "doors" matrix group reported the email door as lost ("0 record") after n8n's restart. The email had in fact been processed 50 s after the restart (WF-02 exec 4448 → `app_000611` NEEDS_REVIEW MISSING_ANSWER).

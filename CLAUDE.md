@@ -113,4 +113,4 @@ Run it, show the evidence (test output, execution ID, CRM state) and update the 
 - (L-009) Unit tests stay offline: `npm test` only runs `tests/**/*.test.js`; never name a live script `*-test.js`.
 - (L-016) Failure tests also restart the orchestrator (n8n) and every stateful trigger source (mail server, queues), then check that nothing was left behind; know what state each trigger node keeps.
 - (L-015) Before committing a changed file under `reports/`, read it and check every doc line that cites it; an unexpected change to evidence is a signal, not an artifact.
-- (L-014) Before any run of more than 20 LLM calls, state the provider's real daily limit (read it from the provider, e.g. the 429 body, not third-party posts) and the calls already used that day; plan each run to finish inside one quota day.
+- (L-014, L-018) Before any run of more than 20 LLM calls, state the provider's real daily limit AND when it resets (read both from the provider, e.g. the 429 body and its rate-limits page, not third-party posts; Gemini: 500/day per project, reset at midnight Pacific) and the calls already used that day; plan each run to finish inside one quota day.

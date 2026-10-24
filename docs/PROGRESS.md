@@ -2,8 +2,8 @@
 **Current phase:** 8 — Prove it works every time · **Target finish:** straight-through build (D-008) · **Pace:** continuous; learner now doing retrieval questions at session start
 
 ## Now / Next / Blocked
-- **Now:** Phase 8, Plan A (learner's choice): quota day 2026-10-18: LLM-fault rows (done, 5/5) + full dataset run `~e1` (~370 calls)
-- **Next:** next quota day (after 00:00 UTC): consistency `~e2`/`~e3` (~80), v1 on the 59-record sample (~118), final eval:smoke (~18), final report
+- **Now:** Phase 8, quota day 2 (Pacific date 2026-10-24; resets at midnight Pacific = 07:00 UTC, L-018): consistency `~e2`/`~e3` (~80), v1 on the 59-record sample (~118), final eval:smoke (~18), final report. Waiting for the learner's approval of the ~220 calls
+- **Next:** the learner decides how to handle model noise (review band, median of runs, or accept), using the consistency numbers; then P5 of crm-platform (move to the shared CRM, `C:\Users\larkhiya\crm-platform`)
 - **Blocked:** nothing (the second half waits for the quota reset)
 - **Notes:** no CRM reset for Phase 8: every run screens tagged copies (`<ref>~e1` etc.), so earlier evidence stays. The n8n Gemini credential is named "Google Gemini(PaLM) Api account".
 
@@ -134,9 +134,24 @@ Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items m
   - The bug was re-created on the old config: an email sent with bookmark 39 was ignored. After the fix it was caught up 1 min after publishing (`app_000608`, WF-02 exec 4413); the original waiting email had been lost earlier, when GreenMail restarted.
   - The node sets its UID bookmark again in memory after every batch, so a GreenMail restart while n8n keeps running still strands mail until WF-02 is re-published. Matrix `doors` row 2 ✗: not processed in 180 s; re-publishing WF-02 (the runbook) → processed 66 s later (`app_000615`, 0 LLM calls)
   - **Learner decision:** accept the gap with the runbook, add a WF-02 re-publish watchdog (needs an n8n API key inside n8n), or change the intake at the Gmail step (D-034 options C/D/E)
-- [ ] Consistency (`~e2`, `~e3`), v1 vs v2 (59-record sample), final report
-- [ ] Final `npm test` + `npm run eval:smoke` as the regression check
-- [ ] Learner: read the confusion matrices and explain the biggest error pattern first
+- [x] Consistency (`~e2`, `~e3`, 2026-10-24, 80 calls, 0 repairs), in `reports/eval-2026-10-24.md`:
+  - same status in all 3 runs: 19/20 (csr-013 flips, 51.25 / 56.25 / 58.75 on the 55 line);
+  - score spread: mean 4.5, median 5, p90 8.75, max 11.25;
+  - median of 3 runs: 20/20 against the answer key;
+  - review-band simulation on `~e1`: ±2.5 → 4.9% more reviews, 6/8 errors caught; ±3.75 → 15.1%, 8/8
+- [x] v1 vs v2 on the 59-record sample (`~v1`, 122 calls, 4 repairs):
+  - v1 57/59, v2 58/59;
+  - 1 status change (sdr-006);
+  - mean |Δscore| 2.86, which is below run-to-run noise: no accuracy difference can be claimed;
+  - v2 needed 0 repairs.
+  - WF-10 was switched to `screening_v1` for the run and back; afterwards `git diff -- workflows src` was empty and n8n matched git
+- [x] Final regression: `npm test` 168/168, `npm run build:check` up to date, `npm run eval:smoke` **15/15** (18 calls)
+- [x] Final report `reports/eval-2026-10-24.md` (+ `.json`). The interim `reports/eval-2026-10-18.md` is kept as evidence
+- [ ] Learner: read the confusion matrices in `reports/eval-2026-10-24.md` and explain the biggest error pattern first (Claude's notes are collapsed)
+- [ ] Learner decisions:
+  - how to handle model noise (D-035);
+  - how to judge the two §5.4 rows that fail on single-run noise (name-swap, model-level injection);
+  - the D-034 email gap
 
 ## Learner review pass (D-008), collected as we go
 - Concepts deferred: see LEARNING (`⏭`)
@@ -145,6 +160,15 @@ Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items m
 - Exercises: hello-items item-count prediction (Phase 0); find a loose field in the ScoreCard schema (Phase 1); spot-check 10 answer-key rows (Phase 2)
 
 ## Session log (newest first)
+### S-03 · 2026-10-24 (UTC) · Phase 8, quota day 2
+- Done: consistency runs `~e2`/`~e3`; prompt v1 vs v2 on 59 records; final `npm test` + `eval:smoke`; final report `reports/eval-2026-10-24.md`; review-band simulation on `~e1` (no calls)
+- Verified (evidence): the Phase 8 checklist lines above
+- Found: run-to-run noise (mean spread 4.5) is larger than the v1 vs v2 difference (2.86); a review band of ±2.5 catches 6 of the 8 `~e1` errors for 4.9% more reviews
+- Not verified: the noise tail beyond 20 CVs × 3 runs (the name-swap twins showed 17.5 once)
+- Lessons: L-018 (the quota resets at midnight Pacific, not 00:00 UTC; L-014 widened)
+- LLM calls this quota day: 220 of 500 (80 + 122 + 18), Pacific date 2026-10-24
+- Also in this session: the shared CRM platform `C:\Users\larkhiya\crm-platform` (Twenty + crm-gateway) was built, P0–P4; it will replace the mock CRM after Phase 8 (its P5)
+
 ### Side session · 2026-10-19 to 2026-10-23 · Phase 8 (L-016 fixes, run in the background)
 - Done: the CRM webhook delivery log (list + redeliver) with a migration; WF-04 Reconcile webhooks; WF-02 `trackLastMessageId: false` + `forceReconnect: 1`; matrix group `doors` (saves after every check)
 - Verified (evidence): `app_000607` final via WF-04; matrix `doors` 1/2 (row 2 is the known D-034 gap, recovered by the runbook); `npm test` 168/168; n8n matches git (11 workflows)
