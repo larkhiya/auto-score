@@ -38,7 +38,7 @@ flowchart LR
   L1 -->|"LLM unavailable after retries"| DL
   L2 --> C{"Validate JSON<br/>verify evidence quotes"}
   C -->|invalid after 1 repair| R
-  C -->|ok| M["Code: weighted total →<br/>status from thresholds"]
+  C -->|ok| M["Code: weighted total →<br/>status from thresholds<br/>(±2.5 of a threshold → NEEDS_REVIEW, D-035)"]
   M --> W["CRM PATCH (idempotent,<br/>backoff on 429/5xx)"]
   PR --> W
   R --> W

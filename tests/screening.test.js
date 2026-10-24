@@ -98,9 +98,9 @@ test('total = Σ weight × score / 4 (0 to 100), for both profiles', () => {
   assert.equal(total, 38.75);
   assert.equal(breakdown[0].points, 18.75);
 });
-test('status boundaries: 54.9 / 55 / 74.9 / 75', () => {
+test('status boundaries: 54.9 / 55 / 74.9 / 75 (thresholds alone, review band off)', () => {
   const t = csr.thresholds;
-  const s = (total) => mapStatus({ total, confidence: 0.9 }, t).status;
+  const s = (total) => mapStatus({ total, confidence: 0.9 }, t, { reviewBand: 0 }).status;
   assert.equal(s(54.9), 'NOT_A_FIT');
   assert.equal(s(55), 'MAYBE');
   assert.equal(s(74.9), 'MAYBE');
@@ -108,6 +108,25 @@ test('status boundaries: 54.9 / 55 / 74.9 / 75', () => {
   assert.equal(s(75), 'SHORTLISTED');
   assert.equal(s(100), 'SHORTLISTED');
   assert.equal(s(0), 'NOT_A_FIT');
+});
+test('review band (D-035): within 2.5 points of a threshold, inclusive → NEEDS_REVIEW NEAR_THRESHOLD', () => {
+  const t = csr.thresholds; // maybe 55, shortlist 75
+  const m = (total, extra = {}) => mapStatus({ total, confidence: 0.9, ...extra }, t);
+  assert.deepEqual(m(52.5), { status: 'NEEDS_REVIEW', reason_codes: ['NEAR_THRESHOLD'] });
+  assert.equal(m(52.49).status, 'NOT_A_FIT');
+  assert.equal(m(55).status, 'NEEDS_REVIEW');
+  assert.equal(m(57.5).status, 'NEEDS_REVIEW');
+  assert.equal(m(57.51).status, 'MAYBE');
+  assert.equal(m(72.5).status, 'NEEDS_REVIEW');
+  assert.equal(m(77.5).status, 'NEEDS_REVIEW');
+  assert.equal(m(77.51).status, 'SHORTLISTED');
+  assert.equal(m(100).status, 'SHORTLISTED');
+  assert.equal(m(0).status, 'NOT_A_FIT');
+  // Stronger reasons win: they are reported, not replaced by NEAR_THRESHOLD.
+  assert.deepEqual(m(55, { confidence: 0.3 }).reason_codes, ['LOW_CONFIDENCE']);
+  // The band follows each job's own thresholds.
+  assert.equal(mapStatus({ total: 72, confidence: 0.9 }, { shortlist: 90, maybe: 70, min_confidence: 0.6 }).status, 'NEEDS_REVIEW');
+  assert.equal(require('../src/settings').REVIEW_BAND_POINTS, 2.5);
 });
 test('thresholds come from the job profile, not code', () => {
   const strict = { shortlist: 90, maybe: 70, min_confidence: 0.6 };

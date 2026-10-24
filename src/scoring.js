@@ -1,6 +1,7 @@
 // Rubric maths and status mapping (C-17). The LLM gives 0-4 per criterion; code does everything else.
 //   total = Σ weight × score / 4     (weights sum to 100, so total is 0-100)
 //   status from the job's own thresholds; anything doubtful → NEEDS_REVIEW with a reason.
+const { REVIEW_BAND_POINTS } = require('./settings');
 
 // Checks the ScoreCard covers exactly the profile's criteria (same ids, no extras, no gaps).
 function checkCriteriaMatch(profile, scoreCard) {
@@ -34,13 +35,18 @@ function computeBreakdown(profile, verifiedCriteria) {
   return { total, breakdown };
 }
 
-// Pure status decision. Order matters: review reasons are checked before thresholds.
-function mapStatus({ total, confidence, modelFlags = [], evidenceNeedsReview = false }, thresholds) {
+// Pure status decision. Order matters: review reasons first, then the review band, then thresholds.
+// reviewBand (D-035): a total within this many points of a threshold, inclusive, is too close for one
+// noisy model sample to decide, so a person does.
+function mapStatus({ total, confidence, modelFlags = [], evidenceNeedsReview = false }, thresholds, { reviewBand = REVIEW_BAND_POINTS } = {}) {
   const reasons = [];
   if (evidenceNeedsReview) reasons.push('EVIDENCE_NOT_VERIFIED');
   if (typeof confidence === 'number' && confidence < thresholds.min_confidence) reasons.push('LOW_CONFIDENCE');
   for (const f of modelFlags) reasons.push(`MODEL_FLAG_${f}`);
   if (reasons.length) return { status: 'NEEDS_REVIEW', reason_codes: reasons };
+  if (reviewBand > 0 && [thresholds.maybe, thresholds.shortlist].some((t) => Math.abs(total - t) <= reviewBand + 1e-9)) {
+    return { status: 'NEEDS_REVIEW', reason_codes: ['NEAR_THRESHOLD'] };
+  }
   if (total >= thresholds.shortlist) return { status: 'SHORTLISTED', reason_codes: [] };
   if (total >= thresholds.maybe) return { status: 'MAYBE', reason_codes: [] };
   return { status: 'NOT_A_FIT', reason_codes: [] };

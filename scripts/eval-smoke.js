@@ -37,9 +37,12 @@ async function main() {
     const exp = s.row.expected;
     const reasons = (c.result && c.result.reason_codes) || [];
     const sameReasons = SCORED.has(exp.status_band) || [...reasons].sort().join('|') === [...exp.reason_codes].sort().join('|');
-    const pass = c.status === exp.status_band && sameReasons;
+    // D-035: a scored record whose total lands within the review band is handed to a person by design.
+    // That is "deferred", not wrong; it is shown with ↷ and still counts as expected behaviour.
+    const deferred = SCORED.has(exp.status_band) && c.status === 'NEEDS_REVIEW' && reasons.length === 1 && reasons[0] === 'NEAR_THRESHOLD';
+    const pass = (c.status === exp.status_band && sameReasons) || deferred;
     if (pass) ok++;
-    console.log(`${pass ? '✓' : '✗'} ${`${s.row.ref}~${tag}`.padEnd(24)} ${s.row.trait.padEnd(22)} expected ${exp.status_band.padEnd(18)} got ${c.status.padEnd(18)}`
+    console.log(`${deferred ? '↷' : pass ? '✓' : '✗'} ${`${s.row.ref}~${tag}`.padEnd(24)} ${s.row.trait.padEnd(22)} expected ${exp.status_band.padEnd(18)} got ${c.status.padEnd(18)}`
       + ` score ${c.result && c.result.total_score !== null ? String(c.result.total_score).padStart(6) : '     -'}  ${reasons.join(',') || '-'}  llm ${log ? log.llm.calls : '?'}`);
   }
   const open = Object.values(final).filter((c) => c.status === 'NEW' || c.status === 'SCREENING').length;

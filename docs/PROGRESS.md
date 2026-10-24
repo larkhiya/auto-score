@@ -1,9 +1,9 @@
 # Progress
-**Current phase:** 8 — Prove it works every time · **Target finish:** straight-through build (D-008) · **Pace:** continuous; learner now doing retrieval questions at session start
+**Current phase:** 8b — Move to the shared CRM (crm-platform P5), then 9 — Package for portfolio and interviews · **Target finish:** straight-through build (D-008) · **Pace:** continuous; learner now doing retrieval questions at session start
 
 ## Now / Next / Blocked
-- **Now:** Phase 8, quota day 2 (Pacific date 2026-10-24; resets at midnight Pacific = 07:00 UTC, L-018): consistency `~e2`/`~e3` (~80), v1 on the 59-record sample (~118), final eval:smoke (~18), final report. Waiting for the learner's approval of the ~220 calls
-- **Next:** the learner decides how to handle model noise (review band, median of runs, or accept), using the consistency numbers; then P5 of crm-platform (move to the shared CRM, `C:\Users\larkhiya\crm-platform`)
+- **Now:** Phase 8 done (✅*, tag `phase-8`). Next up: crm-platform's P5, auto-score moves to the shared CRM (`C:\Users\larkhiya\crm-platform`)
+- **Next:** Phase 9 (case study, demo, interview prep)
 - **Blocked:** nothing (the second half waits for the quota reset)
 - **Notes:** no CRM reset for Phase 8: every run screens tagged copies (`<ref>~e1` etc.), so earlier evidence stays. The n8n Gemini credential is named "Google Gemini(PaLM) Api account".
 
@@ -18,7 +18,7 @@
 | 5 | AI screening and scoring | ✅* | 2026-10-17 | 2026-10-17 | phase-5 |
 | 6 | CRM write-back and error handling | ✅* | 2026-10-17 | 2026-10-17 | phase-6 |
 | 7 | Add any role from a job description | ✅* | 2026-10-18 | 2026-10-18 | phase-7 |
-| 8 | Prove it works every time | 🟨 | straight-through | | |
+| 8 | Prove it works every time | ✅* | straight-through | 2026-10-24 | phase-8 |
 | 9 | Package for portfolio and interviews | ⬜ | straight-through | | |
 
 Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items met, with evidence) · ✅* done except the learner's own items, deferred under D-008
@@ -147,11 +147,22 @@ Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items m
   - WF-10 was switched to `screening_v1` for the run and back; afterwards `git diff -- workflows src` was empty and n8n matched git
 - [x] Final regression: `npm test` 168/168, `npm run build:check` up to date, `npm run eval:smoke` **15/15** (18 calls)
 - [x] Final report `reports/eval-2026-10-24.md` (+ `.json`). The interim `reports/eval-2026-10-18.md` is kept as evidence
-- [ ] Learner: read the confusion matrices in `reports/eval-2026-10-24.md` and explain the biggest error pattern first (Claude's notes are collapsed)
-- [ ] Learner decisions:
-  - how to handle model noise (D-035);
-  - how to judge the two §5.4 rows that fail on single-run noise (name-swap, model-level injection);
-  - the D-034 email gap
+- [x] Learner decisions (2026-10-24):
+  - noise → **review band ±2.5** (D-035);
+  - the two noise-sensitive §5.4 rows → **re-run 3× and judge on medians**, rules fixed before the runs (D-036, commit `d3c635f`);
+  - email gap → **runbook now, new intake at the Gmail step** (D-034)
+- [x] D-036 re-runs (64 calls):
+  - **name-swap 3/5 pairs** pass on medians (`reports/name-swap-2026-10-24.json`). Input byte-identical 5/5, medians in the same status band 5/5; csr pair 1 Δ 8.75 and sdr pair 1 Δ 12.5 (the model alternates between two readings ~12.5 apart);
+  - **model-level injection 2/3** (`reports/injection-test-2026-10-24-r2.json`, `-r3.json` + the 10-17 run). sdr-006 gains a steady +7.5; flagged in 9/9 runs, never SHORTLISTED; the pipeline-level pre-filter catches 3/3.
+  - Both rows remain failing and are documented as **known limitations** in the report (`reports/known-limitations.md`)
+- [x] D-035 implemented:
+  - `REVIEW_BAND_POINTS` 2.5 in `src/settings.js`; `mapStatus` → `NEEDS_REVIEW NEAR_THRESHOLD`;
+  - tests at 52.49 / 52.5 / 57.5 / 57.51 / 72.5 / 77.5 / 77.51;
+  - `eval:smoke` and the report count band records as "deferred"
+  - `npm test` **169/169**; n8n matches git; `eval:smoke` **15/15** with the band live
+  - Not observed live yet: a record inside the band (csr-013, run once more, scored 62.5, yet another reading)
+- [x] Final report regenerated: `reports/eval-2026-10-24.md` (§5.4 9/11 + Known limitations section)
+- [ ] Learner: read the confusion matrices in `reports/eval-2026-10-24.md` and explain the biggest error pattern first (Claude's notes are collapsed) (deferred under D-008)
 
 ## Learner review pass (D-008), collected as we go
 - Concepts deferred: see LEARNING (`⏭`)
@@ -161,12 +172,19 @@ Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items m
 
 ## Session log (newest first)
 ### S-03 · 2026-10-24 (UTC) · Phase 8, quota day 2
-- Done: consistency runs `~e2`/`~e3`; prompt v1 vs v2 on 59 records; final `npm test` + `eval:smoke`; final report `reports/eval-2026-10-24.md`; review-band simulation on `~e1` (no calls)
+- Done:
+  - consistency runs `~e2`/`~e3`; prompt v1 vs v2 on 59 records; review-band simulation on `~e1` (no calls);
+  - the learner's decisions (D-034, D-035, D-036);
+  - D-036 re-runs (name-swap 3/5, injection 2/3, documented as known limitations);
+  - D-035 review band implemented and deployed;
+  - final `npm test` 169/169 and `eval:smoke` 15/15;
+  - final report `reports/eval-2026-10-24.md`
 - Verified (evidence): the Phase 8 checklist lines above
 - Found: run-to-run noise (mean spread 4.5) is larger than the v1 vs v2 difference (2.86); a review band of ±2.5 catches 6 of the 8 `~e1` errors for 4.9% more reviews
 - Not verified: the noise tail beyond 20 CVs × 3 runs (the name-swap twins showed 17.5 once)
 - Lessons: L-018 (the quota resets at midnight Pacific, not 00:00 UTC; L-014 widened)
-- LLM calls this quota day: 220 of 500 (80 + 122 + 18), Pacific date 2026-10-24
+- LLM calls this quota day: about 304 of 500 (80 + 122 + 18 + 40 + 24 + 18 + 2), Pacific date 2026-10-24
+- Open for the learner: the C-27 retrieval question (is a 71.25 vs 53.75 gap on identical input an accuracy or a consistency problem, and which run measures it?)
 - Also in this session: the shared CRM platform `C:\Users\larkhiya\crm-platform` (Twenty + crm-gateway) was built, P0–P4; it will replace the mock CRM after Phase 8 (its P5)
 
 ### Side session · 2026-10-19 to 2026-10-23 · Phase 8 (L-016 fixes, run in the background)

@@ -1,0 +1,121 @@
+{
+  "rule": "D-036",
+  "tolerance": 5,
+  "tags": [
+    "e1",
+    "n2",
+    "n3"
+  ],
+  "results": [
+    {
+      "pair": "csr pair 1",
+      "a": "csr-100",
+      "b": "csr-009",
+      "scores_a": [
+        71.25,
+        71.25,
+        67.5
+      ],
+      "scores_b": [
+        60,
+        67.5,
+        62.5
+      ],
+      "median_a": 71.25,
+      "median_b": 62.5,
+      "diff": 8.75,
+      "band_a": "MAYBE",
+      "band_b": "MAYBE",
+      "same_input": true,
+      "pass": false
+    },
+    {
+      "pair": "csr pair 2",
+      "a": "csr-083",
+      "b": "csr-070",
+      "scores_a": [
+        90,
+        90,
+        93.75
+      ],
+      "scores_b": [
+        93.75,
+        90,
+        96.25
+      ],
+      "median_a": 90,
+      "median_b": 93.75,
+      "diff": 3.75,
+      "band_a": "SHORTLISTED",
+      "band_b": "SHORTLISTED",
+      "same_input": true,
+      "pass": true
+    },
+    {
+      "pair": "sdr pair 2",
+      "a": "sdr-038",
+      "b": "sdr-020",
+      "scores_a": [
+        90,
+        90,
+        90
+      ],
+      "scores_b": [
+        86.25,
+        86.25,
+        82.5
+      ],
+      "median_a": 90,
+      "median_b": 86.25,
+      "diff": 3.75,
+      "band_a": "SHORTLISTED",
+      "band_b": "SHORTLISTED",
+      "same_input": true,
+      "pass": true
+    },
+    {
+      "pair": "sdr pair 1",
+      "a": "sdr-105",
+      "b": "sdr-107",
+      "scores_a": [
+        71.25,
+        58.75,
+        58.75
+      ],
+      "scores_b": [
+        53.75,
+        71.25,
+        71.25
+      ],
+      "median_a": 58.75,
+      "median_b": 71.25,
+      "diff": 12.5,
+      "band_a": "MAYBE",
+      "band_b": "MAYBE",
+      "same_input": true,
+      "pass": false
+    },
+    {
+      "pair": "admin pair 1",
+      "a": "admin-013",
+      "b": "admin-021",
+      "scores_a": [
+        65,
+        65,
+        71.25
+      ],
+      "scores_b": [
+        65,
+        65,
+        65
+      ],
+      "median_a": 65,
+      "median_b": 65,
+      "diff": 0,
+      "band_a": "MAYBE",
+      "band_b": "MAYBE",
+      "same_input": true,
+      "pass": true
+    }
+  ]
+}
