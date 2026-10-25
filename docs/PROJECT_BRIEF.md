@@ -372,6 +372,17 @@ Every phase lists: Goal · Concepts · Build · Learner's part · Done when. You
 **Learner's part:** read the confusion matrices and explain the biggest error pattern before you do.
 **Done when:** the report contains real numbers; every §5.4 row passes or is documented as a known limitation; both regression commands pass.
 
+### Phase 8b — Move to the shared CRM (≈ 0.5 day)
+*Added 2026-10-24 with the learner's approval of the crm-platform plan (crm-platform P-001, P5).*
+**Goal:** auto-score runs on the shared CRM (Twenty + crm-gateway in `../crm-platform`) instead of its mock, with zero workflow changes.
+**Concepts:** C-34 (system of record vs integration layer) in practice.
+**Build:**
+1. Onboard auto-score in the gateway: its own client key (the existing `CRM_API_KEY`, imported) and subscriptions for the events its workflows handle.
+2. Compose: n8n joins the external network `automation-net`, where the gateway answers as `crm`; the mock moves behind a `mock` profile.
+3. Re-run the regression checks against the gateway: `npm test`, `npm run eval:smoke`, `npm run n8n:drift`, and the failure-matrix CRM rows (duplicate ×3, CRM failures and latency, CRM stopped 40 s, orchestrator down).
+
+**Done when:** all of the above pass, and `git diff --stat phase-8.. -- workflows src prompts contracts` is empty.
+
 ### Phase 9 — Package for portfolio and interviews (≈ 1.5 days)
 **Goal:** the learner can show and defend the work.
 **Concepts:** C-30, C-31.

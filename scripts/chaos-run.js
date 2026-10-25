@@ -17,7 +17,10 @@ const args = process.argv.slice(2);
 const opt = (name, def) => { const i = args.indexOf(`--${name}`); return i > -1 ? args[i + 1] : def; };
 const FINAL = ['SHORTLISTED', 'MAYBE', 'NOT_A_FIT', 'NEEDS_REVIEW', 'PREFILTER_REJECTED'];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const docker = (cmd) => execSync(`docker ${cmd} auto-score-crm-1`, { stdio: 'pipe' }).toString().trim();
+// The CRM's container: the shared gateway since D-037, the mock with CRM_CONTAINER=auto-score-crm-1.
+const CRM_CONTAINER = loadEnv().CRM_CONTAINER || 'auto-score-crm-1';
+if (!/^[a-z0-9][a-z0-9_.-]*$/.test(CRM_CONTAINER)) throw new Error('CRM_CONTAINER is not a container name');
+const docker = (cmd) => execSync(`docker ${cmd} ${CRM_CONTAINER}`, { stdio: 'pipe' }).toString().trim();
 
 async function waitForCrm(api, seconds = 60) {
   for (let i = 0; i < seconds; i++) { try { await api.stats(); return true; } catch { await sleep(1000); } }
@@ -68,7 +71,7 @@ async function main() {
     if (chaos.fail_rate || chaos.latency_ms || chaos.fail_after_rate) await api.chaos(chaos);
     // 2. Fire the webhooks (as the CRM would), optionally pulling the plug part-way.
     for (let i = 0; i < records.length; i++) {
-      if (stopAfter !== null && i === stopAfter) { docker('stop'); stopped = true; console.log('  CRM container STOPPED'); }
+      if (stopAfter !== null && i === stopAfter) { docker('stop'); stopped = true; console.log(`  CRM container ${CRM_CONTAINER} STOPPED`); }
       const r = records[i];
       const res = await fetch((env.N8N_BASE_URL || 'http://localhost:5678') + '/webhook/application-received', {
         method: 'POST', headers: { 'content-type': 'application/json', 'x-webhook-secret': secret },

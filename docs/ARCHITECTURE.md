@@ -1,6 +1,28 @@
 # Architecture
 
-Adjusted from brief §3.1 for these decisions: D-007 (Gemini), D-011 (GreenMail), dedupe in the CRM, email calling WF-10 directly with the webhook suppressed, and a reconciliation sweep for webhooks n8n missed (D-033).
+Adjusted from brief §3.1 for these decisions: D-007 (Gemini), D-011 (GreenMail), dedupe in the CRM, email calling WF-10 directly with the webhook suppressed, a reconciliation sweep for webhooks n8n missed (D-033), and the shared CRM (D-037).
+
+"CRM" in the diagram is the **shared crm-platform** since D-037: Twenty (system of record: real users, field permissions, the recruiter's UI) behind crm-gateway, which serves this project's CRM contract unchanged. n8n reaches it as `http://crm:3000` on the Docker network `automation-net`. See `../crm-platform/docs/ARCHITECTURE.md`.
+
+```mermaid
+flowchart LR
+  subgraph as["auto-score (this repo)"]
+    N8N["n8n<br/>WF-01…WF-91 (unchanged)"]
+    LP["llm-proxy → Gemini"]
+    GM["GreenMail"]
+  end
+  subgraph cp["crm-platform (../crm-platform)"]
+    GW["crm-gateway · alias crm:3000<br/>client auto-score (scoped key)<br/>delivery log + retries, poller, CAS"]
+    TW[("Twenty CRM<br/>Postgres + Redis + worker")]
+    GDB[("gateway-db")]
+  end
+  N8N -->|"REST, x-api-key"| GW
+  GW -->|"application.created, job.draft_requested<br/>(x-webhook-secret + x-gateway-signature)"| N8N
+  GW <-->|"REST (90/min budget) + signed webhooks"| TW
+  GW --- GDB
+  N8N --> LP
+  N8N --> GM
+```
 
 ```mermaid
 flowchart LR
@@ -63,12 +85,14 @@ flowchart LR
 | WF-90 | Error handler | `workflows/90-error-handler.json` | Error Trigger → WF-91, for uncaught crashes (error workflow of WF-01 and WF-02) |
 | WF-91 | Dead letter | `workflows/91-dead-letter.json` | n8n Data Table `dead_letters` (works while the CRM is down) + best-effort CRM ERROR + email to ops + RunLog (D-028) |
 | Replay | Dead-letter replay | `scripts/replay-dlq.js` | open rows → ERROR → `application.replay` → WF-10 reclaims ERROR→SCREENING; idempotent |
-| CRM | Mock CRM | `crm/` | Node 24 + Express + `node:sqlite`; REST, webhooks with a delivery log (list failed, redeliver: D-033), pages, failure simulation |
+| CRM | Shared CRM (D-037) | `../crm-platform` · gateway container `crm-platform-crm-gateway-1` | Twenty + crm-gateway: the same REST contract, delivery log with redelivery (D-033), job pages (basic-auth sign-in), fault injection. auto-score is gateway client `auto-score` (`crm-platform/scripts/setup-auto-score.js`) |
+| Mock | Mock CRM (retired, D-037) | `crm/` · `docker compose --profile mock` | Node 24 + Express + `node:sqlite`; still used in-process by `npm test`; never run next to the gateway (two hosts named `crm`) |
 | Proxy | LLM proxy | `llm-proxy/` · Compose service `llm-proxy` | between WF-12 and Gemini: forwards unchanged; `/admin/chaos` arms rate_limit / server_error / invalid_json / timeout for the next N calls (D-031); never logs the key |
 | Eval | Evaluation tooling | `scripts/eval-smoke.js`, `failure-matrix.js`, `eval-report.js`, `role-switch-report.js` | regression smoke (5 per role), §5.4 failure-injection matrix, `reports/eval-<date>.md` |
 | src | Pure logic | `src/` | inlined into Code nodes by `scripts/build-workflows.js` (drift-tested) |
 | Mail | GreenMail | Compose service `greenmail` | SMTP 3025 and IMAP 3143, test only |
 
 ## Network (Docker Compose)
-- Containers reach each other by service name: n8n → `http://crm:3000`, CRM → `http://n8n:5678/webhook/...`, n8n → `greenmail:3143`, n8n → `http://llm-proxy:8090` → `https://generativelanguage.googleapis.com`.
-- From the host: n8n editor `http://localhost:5678`, CRM `http://localhost:3000`, llm-proxy admin `http://127.0.0.1:8090` (bound to loopback only).
+- Containers reach each other by service name: n8n → `http://crm:3000` (the gateway, on `automation-net`), gateway → `http://n8n:5678/webhook/...`, n8n → `greenmail:3143`, n8n → `http://llm-proxy:8090` → `https://generativelanguage.googleapis.com`.
+- n8n is on two networks: `auto-score_default` (llm-proxy, GreenMail) and the external `automation-net` (the gateway and other automations). Start crm-platform first; it creates `automation-net`.
+- From the host: n8n editor `http://localhost:5678`, CRM gateway `http://localhost:3200` (Twenty's UI `http://localhost:3100`), llm-proxy admin `http://127.0.0.1:8090` (bound to loopback only).

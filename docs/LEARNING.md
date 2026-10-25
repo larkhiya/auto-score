@@ -33,7 +33,7 @@ Under D-008 (straight-through build), each phase's concepts are marked ⏭ when 
 | C-26 | Testing pyramid for automations | 8 | check each brick, then the wall, then the house | ⬜ | |
 | C-27 | Evals: accuracy and consistency | 8 | a scale: right weight? same weight three times? | 🟨 | Thermometer showing 21°, 21°, 21° in a 25° room: "It's consistently wrong." (lesson 7, after the accuracy vs consistency mix-up; still to practise: measuring both on our real eval data) |
 | C-28 | Observability: logs, execution IDs, metrics | 8 | a flight data recorder | ⬜ | |
-| C-29 | Rate limits, batching and concurrency | 8 | checkout lanes at a supermarket | ⬜ | |
+| C-29 | Rate limits, batching and concurrency | 8 | checkout lanes at a supermarket | ⬜ | live example for the concept break: L-019 (the harness's parallel polling vs the shared CRM's 90/min, plus a cache stampede) |
 | C-30 | Secrets and environments | 9 | house keys vs a photo of your keys online | ⬜ | |
 | C-31 | Explaining a system: case study and demo | 9 | a museum tour guide | ⬜ | |
 | C-32 | Role-agnostic design: one engine, many job profiles | 1, 7 | one exam-marking machine, a different answer key per exam | ⏭ | |

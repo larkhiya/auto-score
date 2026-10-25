@@ -1,11 +1,13 @@
 # Progress
-**Current phase:** 8b — Move to the shared CRM (crm-platform P5), then 9 — Package for portfolio and interviews · **Target finish:** straight-through build (D-008) · **Pace:** continuous; learner now doing retrieval questions at session start
+**Current phase:** 9 — Package for portfolio and interviews · **Target finish:** straight-through build (D-008) · **Pace:** continuous; learner now doing retrieval questions at session start
 
 ## Now / Next / Blocked
-- **Now:** Phase 8 done (✅*, tag `phase-8`). Next up: crm-platform's P5, auto-score moves to the shared CRM (`C:\Users\larkhiya\crm-platform`)
-- **Next:** Phase 9 (case study, demo, interview prep)
-- **Blocked:** nothing (the second half waits for the quota reset)
-- **Notes:** no CRM reset for Phase 8: every run screens tagged copies (`<ref>~e1` etc.), so earlier evidence stays. The n8n Gemini credential is named "Google Gemini(PaLM) Api account".
+- **Now:** Phase 8b done (tag `phase-8b`): auto-score runs on the shared CRM (`../crm-platform`, Twenty + crm-gateway), with zero changes in workflows, `src/`, prompts and contracts (D-037)
+- **Next:** Phase 9 (case study, demo, interview prep). The demo now shows Twenty's UI as the recruiter's CRM
+- **Blocked:** nothing
+- **Notes:**
+  - Start order: crm-platform first (it creates `automation-net`), then this stack. On Windows, start Docker with `../crm-platform/scripts/docker-start.ps1` (PL-010).
+  - Phase 8's records stay in the mock's volume (D-037). The n8n Gemini credential is named "Google Gemini(PaLM) Api account".
 
 ## Phases
 | # | Phase | Status | Planned | Done | Tag |
@@ -19,6 +21,7 @@
 | 6 | CRM write-back and error handling | ✅* | 2026-10-17 | 2026-10-17 | phase-6 |
 | 7 | Add any role from a job description | ✅* | 2026-10-18 | 2026-10-18 | phase-7 |
 | 8 | Prove it works every time | ✅* | straight-through | 2026-10-24 | phase-8 |
+| 8b | Move to the shared CRM (crm-platform P5) | ✅ | 2026-10-25 | 2026-10-25 | phase-8b |
 | 9 | Package for portfolio and interviews | ⬜ | straight-through | | |
 
 Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items met, with evidence) · ✅* done except the learner's own items, deferred under D-008
@@ -164,13 +167,46 @@ Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items m
 - [x] Final report regenerated: `reports/eval-2026-10-24.md` (§5.4 9/11 + Known limitations section)
 - [ ] Learner: read the confusion matrices in `reports/eval-2026-10-24.md` and explain the biggest error pattern first (Claude's notes are collapsed) (deferred under D-008)
 
+**Phase 8b** (D-037; crm-platform P5, P-015)
+- [x] Onboarded in the gateway by `../crm-platform/scripts/setup-auto-score.js`: client `auto-score` with the imported `CRM_API_KEY`; subscriptions for `application.created` (WF-01) and `job.draft_requested` (WF-05) with the existing `x-webhook-secret`
+- [x] Compose: n8n on `auto-score_default` + `automation-net`; `crm` resolves to the gateway; the mock is behind `--profile mock` (stopped). `.env`: `CRM_BASE_URL=http://localhost:3200`, `CRM_CONTAINER=crm-platform-crm-gateway-1`
+- [x] Approved profiles in Twenty identical to `config/jobs` (csr, sdr, admin v1)
+- [x] Regression on the shared CRM:
+  - `npm test` 169/169;
+  - `npm run n8n:drift`: n8n matches git;
+  - `git diff --stat phase-8 -- workflows src prompts contracts`: **empty**;
+  - `npm run eval:smoke` **15/15** (tag `smokemvndm8yo`, 18 LLM calls)
+- [x] Failure matrix, CRM rows (`reports/failure-matrix-2026-10-25-dup-crm-doors.json`, 0 LLM calls):
+  - duplicate ×3 → 1 claim, 1 final;
+  - FAIL_RATE 0.3 + 300 ms: 10 in = 10 out (`reports/chaos-2026-10-25T05-22-17-517Z.json`);
+  - gateway stopped 40 s: 6 in = 6 out, 4 dead letters, all 6 final after replay (`reports/chaos-2026-10-25T05-24-24-957Z.json`);
+  - n8n down 21 s: the gateway's own retry delivered on attempt 4, both doors final 83 s after restart, a forced 2nd redelivery changed nothing, 0 LLM calls.
+  - The mail-restart row still needs the D-034 runbook (processed 67 s after re-publishing WF-02), as in Phase 8: a known limitation, not a regression
+- [x] Harness fix L-019 (one list call per polling round), found by the first smoke run
+- [ ] Not run against the gateway: the `bias` row (the job page now needs a reviewer sign-in) and the `job`, `email` and `llm` groups (CRM-agnostic, passed in Phase 8)
+
 ## Learner review pass (D-008), collected as we go
 - Concepts deferred: see LEARNING (`⏭`)
-- Decisions to confirm: D-014 to D-021, D-023 to D-025, D-028 to D-033 (`pending learner review`); D-036's tolerances. (D-034 and D-035 decided by the learner on 2026-10-24.)
+- Decisions to confirm: D-014 to D-021, D-023 to D-025, D-028 to D-033 (`pending learner review`); D-036's tolerances; D-037's details (the doors check accepts both retry styles; WF-01 keeps the shared-secret header for now). (D-034 and D-035 decided by the learner on 2026-10-24.)
 - Profile review: the Admin v1 gaps above (missing PA titles, English, Office as a criterion rather than a must-have), and the csr anchors that credit sales evidence (role-switch finding). Decide whether to make v2s
 - Exercises: hello-items item-count prediction (Phase 0); find a loose field in the ScoreCard schema (Phase 1); spot-check 10 answer-key rows (Phase 2)
 
 ## Session log (newest first)
+### S-04 · 2026-10-25 (UTC) · Phase 8b, move to the shared CRM
+- Done:
+  - onboarding in the gateway; the network switch; the mock behind a profile;
+  - regression (169/169, drift clean, empty diff, smoke 15/15);
+  - the failure matrix's CRM rows (4/4 planned rows; the mail row as known);
+  - crm-platform's n8n template run live in this n8n (crm-platform P5)
+- Verified (evidence): the Phase 8b checklist above
+- Found:
+  - the harness's parallel polling overran the shared CRM's rate limit (L-019), made worse by a cache stampede in the gateway (crm-platform PL-011). Both fixed.
+  - The gateway retries a failed delivery itself, so WF-04 is now the second line of recovery, not the first
+- Not verified: a recruiter's decision made in Twenty's UI reaching auto-score (crm-platform P3 open item); the 253-applicant dataset re-seeded into Twenty (not needed for the checks; optional for the Phase 9 demo)
+- Decisions: D-037 · Lessons: L-019
+- LLM calls this quota day: about 340 of 500 (304 before + 18 in the first smoke run + 18 in the second), Pacific date 2026-10-24
+- Interruptions: Windows restarted on 2026-10-24 and Docker Desktop crashed at start on a stale socket again (crm-platform PL-010; fixed, plus `docker-start.ps1`)
+
 ### S-03 · 2026-10-24 (UTC) · Phase 8, quota day 2
 - Done:
   - consistency runs `~e2`/`~e3`; prompt v1 vs v2 on 59 records; review-band simulation on `~e1` (no calls);

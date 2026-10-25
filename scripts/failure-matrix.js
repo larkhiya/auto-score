@@ -212,7 +212,9 @@ async function bias(api) {
 // Both checks use records that stop before the LLM (keyword fail, email without answers): 0 LLM calls.
 const N8N_CONTAINER = 'auto-score-n8n-1';
 const MAIL_CONTAINER = 'auto-score-greenmail-1';
-const DOOR_WAIT_MS = 300000; // n8n boot + one sweep interval (WF-04 runs every minute) + screening, with margin
+// n8n boot + one sweep interval (WF-04 runs every minute) or the gateway's next retry (it tries at
+// 0, 2, 12, 42, 102, 222 s…) + screening, with margin.
+const DOOR_WAIT_MS = 300000;
 const MAIL_RESTART_WAIT_MS = 180000; // three of WF-02's forced reconnects (every minute), each one a catch-up fetch
 const docker = (...a) => new Promise((resolve, reject) => {
   execFile('docker', a, { encoding: 'utf8', timeout: 120000 }, (err, stdout, stderr) => (err ? reject(new Error(`docker ${a.join(' ')}: ${(stderr || err.message).trim()}`)) : resolve(stdout.trim())));
@@ -272,7 +274,10 @@ async function doors(api, data) {
   try {
     ({ application: app } = await api.createApplication(applicationBody(variant(row, `doorA${stamp}`)), { notify: true }));
     email = await emailApplication('robin.okafor', 'Robin Okafor', `doorB${stamp}`);
-    for (let i = 0; i < 20 && !failedBefore; i++) { await sleep(1000); failedBefore = (await deliveriesOf(api, app.application_id)).find((d) => d.state === 'failed') || null; }
+    // Any attempt that failed while n8n was down. The mock gives up within seconds (state "failed", then
+    // WF-04 redelivers); the shared gateway keeps retrying on its own schedule for ~19 minutes (state
+    // "pending" with the error), and only then hands it to WF-04 (D-037). Both are fine; losing it is not.
+    for (let i = 0; i < 20 && !failedBefore; i++) { await sleep(1000); failedBefore = (await deliveriesOf(api, app.application_id)).find((d) => d.attempts >= 1 && d.error) || null; }
     await sleep(Math.max(0, 20000 - (Date.now() - t0)));
   } finally {
     await docker('start', N8N_CONTAINER);
@@ -293,11 +298,12 @@ async function doors(api, data) {
   await sleep(15000);
   const c2 = await api.getCandidate(app.application_id, true);
   record({ group: 'doors', row: 'Orchestrator down while applications arrive → nothing lost (L-016)', check: `n8n stopped for ${down} s while 1 CRM application (webhook) and 1 email arrive; then started again`,
-    expected: 'webhook failed every CRM retry; WF-04 redelivers it → PREFILTER_REJECTED; the email waits UNSEEN → 1 record NEEDS_REVIEW MISSING_ANSWER; a forced 2nd redelivery changes nothing (1 claim); 0 LLM calls',
-    actual: `n8n ${healthy ? 'healthy' : 'NOT healthy'}; delivery before: ${failedBefore ? `failed after ${failedBefore.attempts} tries (${failedBefore.error})` : 'not failed'}, after: ${delivery.state}, ${delivery.attempts} attempts`
+    expected: 'webhook attempts fail while n8n is down; after the restart the CRM\'s own retry or WF-04\'s redelivery delivers it → PREFILTER_REJECTED; the email waits UNSEEN → 1 record NEEDS_REVIEW MISSING_ANSWER; a forced 2nd redelivery changes nothing (1 claim); 0 LLM calls',
+    actual: `n8n ${healthy ? 'healthy' : 'NOT healthy'}; delivery before: ${failedBefore ? `${failedBefore.state} after ${failedBefore.attempts} failed tries (${failedBefore.error})` : 'no failed attempt seen'}, after: ${delivery.state}, ${delivery.attempts} attempts`
+      + ` (recovered by ${delivery.redelivered_at ? 'WF-04 redelivery' : 'the CRM\'s own retry'})`
       + ` · CRM door: ${c.status} · email door: ${mails.length} record, ${m ? `${m.status} ${(m.result.reason_codes || []).join(',')}` : 'none'} · both final ${Math.round(after)} s after restart`
       + ` · forced redelivery: ${forced.state}, then ${c2.status} with ${claims(c2)} claim · LLM calls ${calls.join('/')}`,
-    pass: Boolean(failedBefore) && delivery.state === 'delivered' && Boolean(delivery.redelivered_at) && c.status === 'PREFILTER_REJECTED'
+    pass: Boolean(failedBefore) && delivery.state === 'delivered' && c.status === 'PREFILTER_REJECTED'
       && mails.length === 1 && m.status === 'NEEDS_REVIEW' && m.job_id === 'csr' && (m.result.reason_codes || []).includes('MISSING_ANSWER')
       && c2.status === 'PREFILTER_REJECTED' && claims(c2) === 1 && calls.every((n) => n === 0),
     evidence: { application_id: app.application_id, email_application_ids: mails.map((x) => x.application_id), delivery, history: c2.history, down_s: down, final_after_restart_s: Math.round(after) } });

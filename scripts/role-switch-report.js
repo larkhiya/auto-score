@@ -20,7 +20,12 @@ async function main() {
   const map = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/out/seed-map.json'), 'utf8'));
   let rows = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/role_switch.json'), 'utf8')).rows;
   if (opt('refs')) { const set = new Set(opt('refs').split(',')); rows = rows.filter((r) => set.has(r.ref)); }
-  const fetchAll = () => Promise.all(rows.flatMap((r) => ['csr', 'sdr'].map((job) => api.getCandidate(map[`${r.ref}@${job}`]))));
+  // One read at a time (L-019): a parallel burst overruns the shared CRM's rate limit.
+  const fetchAll = async () => {
+    const out = [];
+    for (const r of rows) for (const job of ['csr', 'sdr']) out.push(await api.getCandidate(map[`${r.ref}@${job}`]));
+    return out;
+  };
 
   let cands = await fetchAll();
   for (let t = 0; args.includes('--wait') && t < 60 && cands.some((c) => OPEN.has(c.status)); t++) { await sleep(5000); cands = await fetchAll(); }

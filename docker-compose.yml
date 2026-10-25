@@ -1,9 +1,13 @@
 # Auto-Score stack. Containers reach each other by service name (n8n, crm, llm-proxy, greenmail), never localhost.
 # Values come from .env (run `npm run init-env` first).
+# The CRM (D-037): the shared crm-platform gateway, reached as `crm` on the external network
+# automation-net (start ../crm-platform first). The old mock CRM only starts with `--profile mock`;
+# never run both at once, or n8n sees two hosts named `crm`.
 name: auto-score
 
 services:
   n8n:
+    networks: [default, automation-net]
     # Pinned (D-006). 2.43.7 = the `stable` tag on 2026-10-16.
     image: docker.n8n.io/n8nio/n8n:2.43.7
     restart: unless-stopped
@@ -30,6 +34,8 @@ services:
 
   crm:
     # Mock CRM (Phase 2): REST API, webhooks to n8n, HTML pages, failure simulation.
+    # Retired by D-037; kept for offline work: `docker compose --profile mock up -d crm`.
+    profiles: ["mock"]
     build:
       context: .
       dockerfile: crm/Dockerfile
@@ -81,3 +87,8 @@ services:
 volumes:
   n8n_data:
   crm_data:
+
+networks:
+  automation-net:
+    # Created by crm-platform (node scripts/net-create.js); shared by every automation and the gateway.
+    external: true

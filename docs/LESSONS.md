@@ -14,6 +14,21 @@ Template:
 
 ---
 
+## L-019 · The test harness polled the CRM as if it had no rate limit, because the mock had none
+- **Date:** 2026-10-25 · **Phase:** 8b · **Who:** Claude
+- **What happened:** the first `eval:smoke` against the shared CRM stopped with "The operation was aborted due to timeout". All 15 records had been created and screened correctly; the *harness* timed out while waiting for them.
+- **Symptom:** a client timeout (15 s) in the script, after the pipeline had finished its work. The gateway's stats showed 62 retried Twenty calls.
+- **Root cause (why chain):**
+  - Why the timeout? `waitSettled` read all 15 records in parallel every 5 s. Each read costs the gateway 1–2 calls to Twenty, and the gateway spends at most 90 a minute (Twenty allows 100). The last calls of each burst queued for more than 15 s.
+  - Why was the burst so large? The gateway's job cache had a stampede: when it expired, all 15 parallel readers refetched the job list at once (crm-platform PL-011).
+  - Why wasn't this seen before? The mock CRM had no rate limit, so the harness's call pattern was never priced. A fake that is more generous than the real dependency hides exactly this.
+- **Fix:**
+  - `waitSettled` makes one list call per round (`status=NEW,SCREENING`), then reads each record once, one at a time. `role-switch-report.js` reads sequentially too.
+  - The gateway's job cache is single-flight (one fetch per expiry, unit-tested).
+  - Verified by the re-run of `eval:smoke` (PROGRESS session log).
+- **Prevention rule:** price every polling loop against the dependency's rate limit: one list call per round, never N parallel reads. → promoted to Learned Rules: yes (L-019).
+- **Concept it illustrates:** C-29 (rate limits, batching and concurrency); C-40 in crm-platform (a test double more generous than the real thing).
+
 ## L-018 · Our docs said the Gemini quota day resets at 00:00 UTC; it resets at midnight Pacific
 - **Date:** 2026-10-24 (UTC) · **Phase:** 8 · **Who:** Claude
 - **What happened:** PROGRESS planned the next quota day as "after 00:00 UTC". Google's rate-limits page says: "Requests per day (RPD) quotas reset at midnight Pacific time" (07:00 UTC while PDT is in force, 08:00 UTC after 1 Nov). It also says limits apply per project, not per key.

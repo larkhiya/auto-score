@@ -1,0 +1,54 @@
+{
+  "at": "2026-10-25T05:24:24.957Z",
+  "chaos": {
+    "fail_rate": 0,
+    "latency_ms": 0,
+    "fail_after_rate": 0
+  },
+  "stop_crm_after": 2,
+  "records_in": 6,
+  "records_out": 6,
+  "by_status": {
+    "PREFILTER_REJECTED": 2,
+    "ERROR": 4
+  },
+  "final": 2,
+  "error": 4,
+  "pending_with_dead_letter": 0,
+  "lost": [],
+  "dead_letters_new": 4,
+  "dead_letters": [
+    {
+      "application_id": "app_001051",
+      "error_code": "CRM_UNAVAILABLE",
+      "crm_marked": true,
+      "notified": true
+    },
+    {
+      "application_id": "app_001050",
+      "error_code": "CRM_UNAVAILABLE",
+      "crm_marked": true,
+      "notified": true
+    },
+    {
+      "application_id": "app_001048",
+      "error_code": "CRM_UNAVAILABLE",
+      "crm_marked": true,
+      "notified": true
+    },
+    {
+      "application_id": "app_001049",
+      "error_code": "CRM_UNAVAILABLE",
+      "crm_marked": true,
+      "notified": true
+    }
+  ],
+  "refs": [
+    "csr-038~chaosBmvndpch4",
+    "csr-039~chaosBmvndpch4",
+    "sdr-014~chaosBmvndpch4",
+    "sdr-018~chaosBmvndpch4",
+    "admin-022~chaosBmvndpch4",
+    "admin-023~chaosBmvndpch4"
+  ]
+}

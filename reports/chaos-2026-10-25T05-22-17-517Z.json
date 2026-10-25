@@ -1,0 +1,32 @@
+{
+  "at": "2026-10-25T05:22:17.517Z",
+  "chaos": {
+    "fail_rate": 0.3,
+    "latency_ms": 300,
+    "fail_after_rate": 0
+  },
+  "stop_crm_after": null,
+  "records_in": 10,
+  "records_out": 10,
+  "by_status": {
+    "PREFILTER_REJECTED": 10
+  },
+  "final": 10,
+  "error": 0,
+  "pending_with_dead_letter": 0,
+  "lost": [],
+  "dead_letters_new": 0,
+  "dead_letters": [],
+  "refs": [
+    "csr-011~chaosAmvndpch4",
+    "csr-022~chaosAmvndpch4",
+    "csr-024~chaosAmvndpch4",
+    "csr-034~chaosAmvndpch4",
+    "sdr-002~chaosAmvndpch4",
+    "sdr-004~chaosAmvndpch4",
+    "sdr-009~chaosAmvndpch4",
+    "sdr-010~chaosAmvndpch4",
+    "admin-007~chaosAmvndpch4",
+    "admin-017~chaosAmvndpch4"
+  ]
+}

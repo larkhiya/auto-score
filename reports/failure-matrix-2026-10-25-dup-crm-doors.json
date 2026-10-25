@@ -1,0 +1,146 @@
+{
+  "at": "2026-10-25T05:31:51.204Z",
+  "stamp": "mvndpch4",
+  "groups": [
+    "dup",
+    "crm",
+    "doors"
+  ],
+  "crashed": null,
+  "results": [
+    {
+      "group": "dup",
+      "row": "The same application delivered twice → processed once",
+      "check": "webhook delivered 3 times: 2 at once, 1 after it finished",
+      "expected": "1 claim, 1 final transition, PREFILTER_REJECTED",
+      "actual": "1 claim, 1 final, PREFILTER_REJECTED (webhooks 202/202/202)",
+      "pass": true,
+      "evidence": {
+        "application_id": "app_001035",
+        "history": [
+          {
+            "from_status": null,
+            "to_status": "NEW",
+            "actor": "system",
+            "execution_id": null,
+            "note": "created via crm",
+            "at": "2026-10-25T05:20:02.532Z"
+          },
+          {
+            "from_status": "NEW",
+            "to_status": "SCREENING",
+            "actor": "automation",
+            "execution_id": "6396",
+            "note": null,
+            "at": "2026-10-25T05:20:03.234Z"
+          },
+          {
+            "from_status": "SCREENING",
+            "to_status": "PREFILTER_REJECTED",
+            "actor": "automation",
+            "execution_id": "6396",
+            "note": "NO_CUSTOMER_FACING_EXPERIENCE",
+            "at": "2026-10-25T05:20:04.032Z"
+          }
+        ]
+      }
+    },
+    {
+      "group": "crm",
+      "row": "CRM down or slow → retried, then ERROR + dead letter, replayable",
+      "check": "FAIL_RATE 0.3 and 300 ms latency on every CRM call, 10 records",
+      "expected": "retries absorb the failures; records in = records out",
+      "actual": "records in 10 = records out 10 · saved reports\\chaos-2026-10-25T05-22-17-517Z.json",
+      "pass": true,
+      "evidence": {
+        "report": "reports\\chaos-2026-10-25T05-22-17-517Z.json"
+      }
+    },
+    {
+      "group": "crm",
+      "row": "CRM down or slow → retried, then ERROR + dead letter, replayable",
+      "check": "CRM container stopped after 2 of 6 records for 40 s, then replay-dlq",
+      "expected": "records in = records out during the outage; after replay all 6 final",
+      "actual": "records in 6 = records out 6 · saved reports\\chaos-2026-10-25T05-24-24-957Z.json · replay: {\"open\":4,\"replayed\":4,\"resolved\":0,\"retry_failed\":0,\"manual\":0,\"duplicate_rows\":0} · after replay 6/6 final",
+      "pass": true,
+      "evidence": {
+        "report": "reports\\chaos-2026-10-25T05-24-24-957Z.json",
+        "replay_exit": 0
+      }
+    },
+    {
+      "group": "doors",
+      "row": "Orchestrator down while applications arrive → nothing lost (L-016)",
+      "check": "n8n stopped for 21 s while 1 CRM application (webhook) and 1 email arrive; then started again",
+      "expected": "webhook attempts fail while n8n is down; after the restart the CRM's own retry or WF-04's redelivery delivers it → PREFILTER_REJECTED; the email waits UNSEEN → 1 record NEEDS_REVIEW MISSING_ANSWER; a forced 2nd redelivery changes nothing (1 claim); 0 LLM calls",
+      "actual": "n8n healthy; delivery before: pending after 1 failed tries (timeout after 5000ms), after: delivered, 4 attempts (recovered by the CRM's own retry) · CRM door: PREFILTER_REJECTED · email door: 1 record, NEEDS_REVIEW MISSING_ANSWER · both final 83 s after restart · forced redelivery: delivered, then PREFILTER_REJECTED with 1 claim · LLM calls 0/0",
+      "pass": true,
+      "evidence": {
+        "application_id": "app_001052",
+        "email_application_ids": [
+          "app_001053"
+        ],
+        "delivery": {
+          "id": 18,
+          "event": "application.created",
+          "event_id": "evt_cc5a4446-76e8-4d99-9be0-65e4f40fda74",
+          "subject_id": "app_001052",
+          "subscription_id": 10,
+          "target": "http://n8n:5678/webhook/application-received",
+          "attempts": 4,
+          "status_code": 202,
+          "error": null,
+          "state": "delivered",
+          "created_at": "2026-10-25T05:25:14.616Z",
+          "last_attempt_at": "2026-10-25T05:26:08.516Z",
+          "next_attempt_at": null,
+          "delivered_at": "2026-10-25T05:26:08.516Z",
+          "redelivered_at": null
+        },
+        "history": [
+          {
+            "from_status": null,
+            "to_status": "NEW",
+            "actor": "system",
+            "execution_id": null,
+            "note": "created via crm",
+            "at": "2026-10-25T05:25:14.458Z"
+          },
+          {
+            "from_status": "NEW",
+            "to_status": "SCREENING",
+            "actor": "automation",
+            "execution_id": "6534",
+            "note": null,
+            "at": "2026-10-25T05:26:11.160Z"
+          },
+          {
+            "from_status": "SCREENING",
+            "to_status": "PREFILTER_REJECTED",
+            "actor": "automation",
+            "execution_id": "6534",
+            "note": "NO_CUSTOMER_FACING_EXPERIENCE",
+            "at": "2026-10-25T05:26:12.964Z"
+          }
+        ],
+        "down_s": 21,
+        "final_after_restart_s": 83
+      }
+    },
+    {
+      "group": "doors",
+      "row": "Mail server restarted → no email lost (L-016)",
+      "check": "GreenMail restarted while n8n keeps running (UIDs start again at 1), then 1 email arrives",
+      "expected": "processed with no help within 180 s: 1 record, job csr, NEEDS_REVIEW incl. MISSING_ANSWER, 0 LLM calls",
+      "actual": "not processed in 180 s (stale in-memory UID bookmark, D-034) · runbook: processed 67 s after re-publishing WF-02 → 1 record, NEEDS_REVIEW MISSING_ANSWER, 0 LLM calls",
+      "pass": false,
+      "evidence": {
+        "application_ids": [
+          "app_001054"
+        ],
+        "unaided": false,
+        "runbook": "processed 67 s after re-publishing WF-02"
+      }
+    }
+  ]
+}

@@ -32,13 +32,25 @@ async function fire(application, { eventId } = {}) {
 }
 
 // Waits until no record is NEW/SCREENING (L-008: never judge a record that hasn't settled).
+// L-019: each round is ONE list call for the open records, then each record is read once, one at a
+// time. The old way (every record read in parallel every 5 s) cost the shared CRM ~360 calls a minute
+// against its 100/min limit and timed the harness out; the mock had no limit, so it never showed.
 async function waitSettled(api, ids, { timeoutMs = 300000, everyMs = 5000 } = {}) {
   const started = Date.now();
+  const wanted = new Set(ids);
   for (;;) {
-    const cands = await Promise.all(ids.map((id) => api.getCandidate(id)));
-    if (!cands.some((c) => OPEN.has(c.status)) || Date.now() - started > timeoutMs) return Object.fromEntries(cands.map((c) => [c.application_id, c]));
+    let open = 0;
+    for (let offset = 0; ; offset += 200) {
+      const page = await api.listCandidates({ status: [...OPEN].join(','), limit: 200, offset });
+      open += page.items.filter((c) => wanted.has(c.application_id)).length;
+      if (page.items.length < 200) break;
+    }
+    if (!open || Date.now() - started > timeoutMs) break;
     await sleep(everyMs);
   }
+  const out = {};
+  for (const id of ids) out[id] = await api.getCandidate(id);
+  return out;
 }
 
 async function runLog(api, id) {

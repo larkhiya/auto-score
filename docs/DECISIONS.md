@@ -12,6 +12,27 @@ Under D-008, Claude makes design choices during the straight-through build and m
 
 ---
 
+## D-037 · auto-score moves to the shared CRM (Twenty + crm-gateway); the mock is retired behind a profile
+- **Date:** 2026-10-25 · **Phase:** 8b · **Status:** accepted
+- **Decided by:** learner (the crm-platform plan, crm-platform P-001: Twenty + gateway, separate repo, switch after Phase 8). Claude: the details below.
+- **Context:** the mock CRM (`crm/`) was built for this project only: one shared key, SQLite, no logins. The learner wanted one professional CRM that every automation uses. `../crm-platform` runs Twenty (the system of record, with real users and field permissions) behind crm-gateway, which serves this project's CRM contract unchanged.
+- **Decision:**
+  - **Network:** n8n joins the external Docker network `automation-net`, where the gateway answers as `crm` on port 3000. Every workflow URL (`http://crm:3000/...`) stays as it is.
+  - **Credentials:** auto-score keeps its `CRM_API_KEY` and `CRM_WEBHOOK_SECRET`. `crm-platform/scripts/setup-auto-score.js` imports the key as gateway client `auto-score` (stored hashed) with only `recruiting:write`, `events:read`, `events:redeliver` and `chaos`. It subscribes WF-01 and WF-05 to `application.created` and `job.draft_requested`, sent with the legacy `x-webhook-secret` header the workflows already check.
+  - **Mock:** stays in the repo behind `docker compose --profile mock` for offline work, and `npm test` still runs it in-process. Never run it next to the gateway: n8n would see two hosts named `crm`.
+  - **Host scripts:** `CRM_BASE_URL=http://localhost:3200`; `CRM_CONTAINER` names the container that `chaos-run.js` stops for the CRM-outage test.
+  - **Doors check** (`failure-matrix.js`): accepts both CRMs' retry styles. The mock fails a delivery within seconds and WF-04 redelivers it. The gateway keeps retrying for about 19 minutes (0, 2 s, 10 s, 30 s, 1, 2, 5, 10 min), and WF-04 is the safety net after that. The check now needs one failed attempt while n8n is down, then `delivered`, and reports which path recovered it.
+- **Why:**
+  - Zero changes in `workflows/`, `src/`, `prompts/` and `contracts/` proves the CRM contract was a real boundary (like Phase 7's no-code role switch).
+  - Importing the existing credentials keeps the n8n credentials untouched, so the migration needs no secret to pass through anyone.
+- **Trade-offs accepted:**
+  - WF-01 still trusts a shared-secret header, not the gateway's HMAC signature, because upgrading it would be a workflow change. That belongs to a later phase.
+  - The job-review page now asks for basic-auth sign-in (crm-platform P-005). So the matrix's `bias` row, which fetches that page with no credentials, is not run against the gateway.
+  - Candidate decisions (ADVANCED/REJECTED) now happen in Twenty's UI.
+  - Phase 8's records (`~e1`, `~e2`, `~e3`, `~v1`, …) stay in the mock's database (volume `crm_data`), not in Twenty. Its reports are committed. Regenerating them from live records needs the mock again (`--profile mock`, gateway stopped, `CRM_BASE_URL=http://localhost:3000`).
+  - `data/out/seed-map.json` now maps refs to both CRMs. The ids can't collide, because the gateway numbers start at `app_001001` and the mock's highest is `app_000765`. The pre-migration copy is `data/out/seed-map.mock-2026-10-24.json`.
+- **Revisit if:** a workflow needs a field the contract doesn't carry; or Phase 9's fresh-clone run shows the two-repo setup is too heavy (then document a mock-only quick start).
+
 ## D-036 · The two noise-sensitive §5.4 rows are judged on medians of 3 runs, with rules fixed before the runs
 - **Date:** 2026-10-24 · **Phase:** 8 · **Status:** accepted (the learner chose re-runs; Claude proposed the tolerances below, written down before any re-run result existed)
 - **Decided by:** learner (method) · Claude (tolerances, pending learner review)
