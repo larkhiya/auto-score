@@ -1,5 +1,5 @@
 # Learning tracker
-Status: ⏭ not yet · 🟦 introduced · 🟨 practiced · ✅ can-explain · ⏭ skipped — revisit
+Status: ⬜ not yet · 🟦 introduced · 🟨 practiced · ✅ can-explain · ⏭ skipped — revisit
 
 Under D-008 (straight-through build), each phase's concepts are marked ⏭ when the phase is built. The review pass walks through them in order, using the "In our system" pointers below.
 
@@ -38,8 +38,15 @@ Under D-008 (straight-through build), each phase's concepts are marked ⏭ when 
 | C-31 | Explaining a system: case study and demo | 9 | a museum tour guide | ⬜ | |
 | C-32 | Role-agnostic design: one engine, many job profiles | 1, 7 | one exam-marking machine, a different answer key per exam | ⏭ | |
 | C-33 | AI-drafted config with human approval, then frozen | 7 | a junior drafts the contract, a manager signs it, nobody edits the signed copy | ✅ | "The policy must be frozen to ensure it isn't unfair to others checked with a newer version. It should not be edited in place; a new version must be created." Plus, self-corrected: with an in-place overwrite "the auditor would see the limit was NOT violated… the €55 claim would be approved in spite of being made on October 28." (lesson 9; added: the audit reason, and that a new version applies going forward) |
+| C-34 | System of record vs integration layer | 8b | a bank's ledger vs the teller window: the ledger holds the truth, the window serves every customer the same way | ⏭ | |
 
 ## Concept break notes (newest first)
+### C-34 · 2026-10-25 (Phase 8b)
+- Deferred under D-008 (row added late, L-020). Review-pass pointers:
+  - Twenty is the system of record: it holds the candidate and job data, the real users and who may change which field, and the recruiter's UI. crm-gateway is the integration layer: it serves this project's CRM contract, keeps the webhook delivery log and its retries, and gives each automation its own scoped key. See D-037 and `docs/ARCHITECTURE.md`.
+  - Evidence: the switch changed nothing in `workflows/`, `src/`, `prompts/` or `contracts/` (`git diff --stat phase-8 -- …` is empty), and `eval:smoke` stayed 15/15.
+  - Question: if the recruiting team replaced Twenty with another CRM tomorrow, which of the two would you rewrite, and what in this repo would change?
+
 ### Design journey (learner's chosen style, 2026-10-18 →)
 The learner asked to learn the system as if designing it from Phase 0: simple terms first, the reasoning behind each choice, a few related ideas per message, a check question after each set, design first and then show what the project built.
 - **Lesson 1 · Understand the problem** (what an automation is; problem before tool; name the domain and its responsibilities). Check: an expense-claim approval automation. The learner gave the manual steps, the pain (slow, careful checking) and two responsibilities: anonymise the claimant for fairness, and handle rejections carefully because a rejection implies wrongdoing. → C-01 🟨.

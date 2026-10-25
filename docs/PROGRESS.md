@@ -56,7 +56,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items m
 **Phase 4**
 - [x] Pre-filter matches the answer key on 100% of the dataset for both roles (222/222, outcome and reason codes; `tests/prefilter.test.js`; mutation checks prove the test has teeth)
 - [x] Wired into WF-10; live runs show pre-filter fails and reviews with **0 LLM calls** (RunLog `llm.calls`)
-- [ ] C-13 at can-explain (deferred, ⏭)
+- [x] C-13 at can-explain (design-journey lesson 3, 2026-10-19; one-liner in LEARNING)
 
 **Phase 5**
 - [x] 20 per role with prompt v2: **37/40** agree with the answer key; 100% schema-valid output (0 repairs needed); misses = 2 cross-applicants (known, D-027) + 1 long CV with genuinely inconsistent generated dates (generator fixed)
@@ -95,7 +95,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items m
 - [x] No code changes for the new role: the Admin work touches only `data/`, `scripts/`, `tests/prefilter.test.js` and `config/jobs/admin.v1.json`. `git diff --stat HEAD -- src prompts/screening_v1.md prompts/screening_v2.md workflows contracts crm` is empty. Since `phase-6`, the screening workflows changed only through re-bundled shared modules from part 1 (the builder prompt added to the prompt registry; the JobProfile 1.1.0 validator). Screening logic and screening prompts are unchanged. n8n matches git
 - [x] Role-switch set: **20/20 CVs move in the expected direction** (target ≥ 18), 40 records all scored, 80 LLM calls, learner approved the run (`reports/role-switch-2026-10-17.json`, `scripts/role-switch-report.js`)
 - [ ] Optional bulk re-score when a new version is approved (not built; optional in the brief)
-- [ ] C-33 at can-explain (deferred, ⏭)
+- [x] C-33 at can-explain (design-journey lesson 9; one-liner in LEARNING)
 - Finding (D-030): the approved keyword list has no "Executive Assistant", "Personal Assistant" or "Secretary", so a strong PA is rejected (`admin-022`). The draft also turned two JD requirements into weighted criteria rather than must-haves: Office/Excel became `office_software_proficiency` (weight 25), and "clear written and spoken English" has no check at all. Both are the reviewer's call; the fix is a v2.
 - Finding (role switch): the gaps are lopsided. Support CVs lose 44–74 points as SDRs (all 10 NOT_A_FIT). Prospecting CVs lose only 1.25–46 points as CSRs, 4 of 10 are still SHORTLISTED as CSRs, and `rs-12` held its direction by 1.25 points. Cause: the csr criteria are generic enough that sales evidence counts. Across the 10 prospecting CVs scored for csr, any quota number earns `results_evidence` 3.8/4 on average, HubSpot call-logging earns `support_tools` 3/4, cold calls count as customer-facing (2.8) and objection handling counts as de-escalation (2.6). The sdr rubric is specific, so it doesn't happen the other way. Same root as the Phase 5 cross-applicant misses (D-027). Fix = a csr v2 with support-specific anchors (learner's decision).
 - Caveat: Admin scores are flat (every strong 100, every medium 65) because the personas are templates. That shows the anchors are applied consistently, not that scoring is accurate on varied CVs. Phase 8 should add varied CVs.
@@ -222,6 +222,15 @@ Status: ⬜ not started · 🟨 in progress · ✅ done (all "Done when" items m
 - LLM calls this quota day: about 304 of 500 (80 + 122 + 18 + 40 + 24 + 18 + 2), Pacific date 2026-10-24
 - Open for the learner: the C-27 retrieval question (is a 71.25 vs 53.75 gap on identical input an accuracy or a consistency problem, and which run measures it?)
 - Also in this session: the shared CRM platform `C:\Users\larkhiya\crm-platform` (Twenty + crm-gateway) was built, P0–P4; it will replace the mock CRM after Phase 8 (its P5)
+
+### Teaching · 2026-10-18 to 2026-10-24 · guided tour stop 1, design journey lessons 1–10 (logged late, L-020)
+- Done:
+  - guided tour stop 1, following `app_000350` (the learner's question: how to understand the whole system end to end). The learner's check question, "n8n is down for 30 s; which application is lost?", became a live test and found two silent-loss paths at the front doors (L-016);
+  - design journey, the learner's chosen style: design the system from Phase 0 in simple terms, practised on an expense-claim example. Lessons 1–9 complete; lesson 10 (how the AI step is built) set, answer pending
+- Concepts: C-06, C-09, C-10, C-13, C-18, C-21, C-33 → ✅; C-01, C-03, C-05, C-19, C-20, C-27 → 🟨. One-liners and misconceptions are in LEARNING
+- Dates: tour stop 1 and the start of the design journey on 2026-10-18; lessons 2, 3, 5, 6, 7 and 8 have 2026-10-19 entries in LEARNING; lessons 9 and 10 are undated and were committed with S-03 (`e10bc5e`, 2026-10-24 UTC)
+- Lessons: L-016 (found on the tour)
+- Next: the answer to lesson 10; tour stops 2–7
 
 ### Side session · 2026-10-19 to 2026-10-23 · Phase 8 (L-016 fixes, run in the background)
 - Done: the CRM webhook delivery log (list + redeliver) with a migration; WF-04 Reconcile webhooks; WF-02 `trackLastMessageId: false` + `forceReconnect: 1`; matrix group `doors` (saves after every check)

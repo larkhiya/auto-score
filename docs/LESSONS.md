@@ -14,6 +14,23 @@ Template:
 
 ---
 
+## L-020 · Teaching sessions updated LEARNING but not PROGRESS
+- **Date:** 2026-10-25 · **Phase:** 9 (found by an audit) · **Who:** Claude
+- **What happened:** an audit of the repo found four places where the docs disagreed:
+  1. PROGRESS still listed C-13 (Phase 4) and C-33 (Phase 7) as not at can-explain. LEARNING has had both at ✅ since design-journey lessons 3 and 9.
+  2. The brief's Phase 8b names C-34, but the LEARNING table had no C-34 row.
+  3. LEARNING's legend used ⏭ for both "not yet" and "skipped". The brief's template and the table use ⬜ for "not yet".
+  4. The teaching sessions (tour stop 1 and design-journey lessons 1–10, 2026-10-18 to 2026-10-24) had no PROGRESS session log entry.
+- **Symptom:** PROGRESS and LEARNING gave different answers to "what can the learner explain?", and a concept the brief names wasn't tracked.
+- **Root cause:**
+  - I treated teaching as LEARNING-only work and didn't run the wrap-up steps for it (PROGRESS checklist and session log).
+  - A concept's status lives in two files (the LEARNING table and the PROGRESS "C-## at can-explain" lines), and nothing ties them together.
+  - Adding Phase 8b to the brief added a concept ID without adding it to the tracker.
+  - The legend broke in the Phase 2 commit (`89bf421`), most likely a blanket ⬜ → ⏭ replacement when concepts were deferred under D-008.
+- **Fix:** the two PROGRESS checkboxes ticked with their lesson; a C-34 row (⏭, with review-pass pointers); the legend restored to the template's; a late session log entry. Verified by re-reading both files and with `npm test` 169/169.
+- **Prevention rule:** a teaching session is a work block: it gets a session log entry, and every concept status change is made in LEARNING and in PROGRESS in the same edit; a concept ID added to the brief gets a LEARNING row at once. → promoted to Learned Rules: yes
+- **Concept it illustrates:** C-28 (observability: the docs are the project's log, so two logs that disagree are a defect)
+
 ## L-019 · The test harness polled the CRM as if it had no rate limit, because the mock had none
 - **Date:** 2026-10-25 · **Phase:** 8b · **Who:** Claude
 - **What happened:** the first `eval:smoke` against the shared CRM stopped with "The operation was aborted due to timeout". All 15 records had been created and screened correctly; the *harness* timed out while waiting for them.

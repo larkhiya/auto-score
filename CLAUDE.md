@@ -115,3 +115,4 @@ Run it, show the evidence (test output, execution ID, CRM state) and update the 
 - (L-015) Before committing a changed file under `reports/`, read it and check every doc line that cites it; an unexpected change to evidence is a signal, not an artifact.
 - (L-019) Price every polling loop against the dependency's rate limit (the shared CRM: 90 Twenty calls/min): one list call per round, never N parallel reads.
 - (L-014, L-018) Before any run of more than 20 LLM calls, state the provider's real daily limit AND when it resets (read both from the provider, e.g. the 429 body and its rate-limits page, not third-party posts; Gemini: 500/day per project, reset at midnight Pacific) and the calls already used that day; plan each run to finish inside one quota day.
+- (L-020) A teaching session is a work block: log it in PROGRESS, and change a concept's status in LEARNING and PROGRESS in the same edit; a concept ID added to the brief gets a LEARNING row at once.
